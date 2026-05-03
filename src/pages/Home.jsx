@@ -31,7 +31,7 @@ export default function Home() {
           <div
             className="w-full h-full bg-cover bg-center bg-no-repeat"
             style={{
-              backgroundImage: `url('/images/hero.jpg'), linear-gradient(160deg, #1a0a0f 0%, #3d0f1a 35%, #8B1A2D 65%, #C9A96E 100%)`,
+              backgroundImage: `url('/images/hero.jpg'), linear-gradient(160deg, #4A1E24 0%, #722F37 40%, #9E7B3C 75%, #FAF6F0 100%)`,
             }}
           />
         </motion.div>
@@ -53,7 +53,7 @@ export default function Home() {
           >
             <span className="h-px w-20 bg-gold/60" />
             <span className="font-sans text-[10px] tracking-extreme uppercase text-gold/80">
-              Newcastle, Australia
+              You're invited to the wedding of
             </span>
             <span className="h-px w-20 bg-gold/60" />
           </motion.div>
@@ -77,7 +77,7 @@ export default function Home() {
           >
             <span className="h-px w-12 bg-gold/50" />
             <p className="font-sans text-sm tracking-ultra uppercase text-white/75">
-              December 12th, 2026
+              26 November, 2026
             </p>
             <span className="h-px w-12 bg-gold/50" />
           </motion.div>
@@ -160,7 +160,7 @@ export default function Home() {
 
             <p className="font-sans font-light text-[15px] leading-relaxed text-ink/65 mb-5">
               We welcome you to join us in celebrating the wedding of Rumman and
-              Esther, taking place on the 12th of December 2026 in Newcastle,
+              Esther, taking place on 26 November 2026 in Hunter Valley,
               Australia.
             </p>
             <p className="font-sans font-light text-[15px] leading-relaxed text-ink/65 mb-10">
@@ -201,11 +201,11 @@ export default function Home() {
           </div>
 
           <h2 className="font-serif text-6xl md:text-8xl lg:text-9xl font-light tracking-widest mb-5 text-white">
-            12.12.2026
+            26.11.2026
           </h2>
 
           <p className="font-sans text-[11px] tracking-ultra uppercase text-white/50 mb-10">
-            Newcastle, New South Wales, Australia
+            Hunter Valley, New South Wales, Australia
           </p>
 
           <Link
@@ -237,8 +237,8 @@ export default function Home() {
 
         <div className="max-w-4xl mx-auto grid md:grid-cols-2 gap-8">
           {[
-            { title: 'The Ceremony', icon: '◆', desc: 'Venue details coming soon. Save the date for December 12, 2026.' },
-            { title: 'The Reception', icon: '◆', desc: 'Venue details coming soon. Join us to celebrate into the night.' },
+            { title: 'The Ceremony', icon: '◆', desc: 'A beautiful ceremony in Hunter Valley on 26 November 2026. Full venue details will be shared soon.' },
+            { title: 'The Reception', icon: '◆', desc: 'A western-inspired reception at Rydges Resort Hunter Valley with food, music, and dancing.' },
           ].map((event, i) => (
             <motion.div
               key={event.title}
@@ -256,7 +256,7 @@ export default function Home() {
                 {event.desc}
               </p>
               <p className="font-sans text-[10px] tracking-ultra uppercase text-gold">
-                December 12, 2026
+                November 26, 2026
               </p>
             </motion.div>
           ))}

@@ -9,22 +9,22 @@ const pageVariants = {
 
 const hotels = [
   {
-    name: 'Crowne Plaza Newcastle',
+    name: 'Rydges Resort Hunter Valley',
     stars: '★★★★★',
-    desc: 'Luxury waterfront hotel in the heart of Newcastle with stunning harbour views.',
-    note: 'Recommended for guests travelling from out of town.',
+    desc: 'Resort accommodation on Wine Country Drive, within easy reach of the reception venue.',
+    note: 'Our top recommendation for wedding guests.',
   },
   {
-    name: 'The Junction Hotel',
+    name: 'Spicers Guesthouse',
     stars: '★★★★',
-    desc: 'Boutique hotel in the inner suburbs, close to restaurants and transport.',
-    note: 'Great option for a relaxed stay.',
+    desc: 'Intimate boutique guest rooms in the heart of Lovedale.',
+    note: 'A peaceful option close to vineyard dining.',
   },
   {
-    name: 'Airbnb / Short-stay',
+    name: 'Hunter Valley Cottage Stay',
     stars: '◆',
-    desc: 'Newcastle has a wide range of Airbnb options from apartments to cottages.',
-    note: 'Book early as December is peak season.',
+    desc: 'Country cottages and farm stays across Hunter Valley for a relaxed weekend.',
+    note: 'Book early to secure a stay during the wedding weekend.',
   },
 ]
 
@@ -33,7 +33,7 @@ export default function AccommodationPage() {
     <motion.div variants={pageVariants} initial="initial" animate="animate" exit="exit">
       <PageHeader
         title="Accommodation"
-        subtitle="We want you to feel right at home in Newcastle"
+        subtitle="We want you to feel right at home in Hunter Valley"
       />
 
       <section className="py-24 px-6 bg-cream">
@@ -47,9 +47,9 @@ export default function AccommodationPage() {
             transition={{ duration: 0.7 }}
           >
             <p className="font-sans font-light text-[15px] text-ink/60 leading-relaxed max-w-xl mx-auto">
-              Newcastle is a beautiful coastal city with plenty of accommodation options.
-              Below are some suggestions — we recommend booking early as December is a
-              popular time to visit.
+              Hunter Valley is the perfect destination for our wedding weekend.
+              Below are some local accommodation suggestions — please book early as
+              November is a popular time to visit.
             </p>
           </motion.div>
 
@@ -94,7 +94,7 @@ export default function AccommodationPage() {
               Need help?
             </h3>
             <p className="font-sans font-light text-[14px] text-white/55 leading-relaxed max-w-md mx-auto mb-6">
-              If you have any questions about getting to Newcastle or finding somewhere
+              If you have any questions about getting to Hunter Valley or finding somewhere
               to stay, please don't hesitate to reach out to us.
             </p>
             <a

@@ -21,7 +21,7 @@ export default function Footer() {
           Rumman & Esther
         </p>
         <p className="font-sans text-[11px] tracking-ultra uppercase text-gold/50 mb-8">
-          December 12, 2026 &nbsp;·&nbsp; Newcastle, Australia
+          November 26, 2026 &nbsp;·&nbsp; Hunter Valley, Australia
         </p>
 
         <nav className="flex flex-wrap justify-center gap-x-6 gap-y-2 mb-10">

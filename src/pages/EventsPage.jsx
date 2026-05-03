@@ -11,22 +11,22 @@ const events = [
   {
     type: 'Ceremony',
     icon: '◇',
-    venue: 'Venue TBA',
-    address: 'Newcastle, NSW, Australia',
-    time: 'Time TBA',
-    date: 'Saturday, December 12, 2026',
+    venue: 'Venue details coming soon',
+    address: 'Hunter Valley, NSW, Australia',
+    time: 'Ceremony begins at 26 November 2026',
+    date: 'Thursday, November 26, 2026',
     description:
-      'Join us as we exchange our vows and begin our journey as husband and wife. Venue and time details will be shared soon.',
+      'Join us as we exchange our vows in Hunter Valley. Venue and time details will be shared soon.',
   },
   {
     type: 'Reception',
     icon: '◇',
-    venue: 'Venue TBA',
-    address: 'Newcastle, NSW, Australia',
-    time: 'Time TBA',
-    date: 'Saturday, December 12, 2026',
+    venue: 'Rydges Resort Hunter Valley',
+    address: '430 Wine Country Drive, Lovedale NSW 2325',
+    time: 'Western-inspired evening reception',
+    date: 'Thursday, November 26, 2026',
     description:
-      'Celebrate with us at the reception — an evening of food, music, dancing, and joy surrounded by the people we love most.',
+      'Celebrate with us at a western-inspired reception at Rydges Hunter Valley, with food, music, and dancing under the stars.',
   },
 ]
 
@@ -35,7 +35,7 @@ export default function EventsPage() {
     <motion.div variants={pageVariants} initial="initial" animate="animate" exit="exit">
       <PageHeader
         title="Events"
-        subtitle="Saturday, December 12, 2026 · Newcastle, Australia"
+        subtitle="Thursday, November 26, 2026 · Hunter Valley, Australia"
       />
 
       {/* Event cards */}
@@ -56,7 +56,7 @@ export default function EventsPage() {
                 <div className="bg-burgundy text-white p-10 flex flex-col justify-center">
                   <span className="text-gold/50 text-3xl block mb-5">{event.icon}</span>
                   <p className="font-sans text-[10px] tracking-extreme uppercase text-gold/70 mb-2">
-                    December 12, 2026
+                    November 26, 2026
                   </p>
                   <h2 className="font-serif text-3xl md:text-4xl font-light text-white mb-1">
                     The {event.type}

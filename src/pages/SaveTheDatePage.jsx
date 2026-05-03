@@ -9,7 +9,7 @@ const pageVariants = {
   exit: { opacity: 0, y: -16, transition: { duration: 0.3 } },
 }
 
-const WEDDING_DATE = new Date('2026-12-12T12:00:00+11:00')
+const WEDDING_DATE = new Date('2026-11-26T12:00:00+11:00')
 
 function getTimeLeft() {
   const now = new Date()
@@ -54,7 +54,7 @@ export default function SaveTheDatePage() {
     <motion.div variants={pageVariants} initial="initial" animate="animate" exit="exit">
       <PageHeader
         title="Save the Date"
-        subtitle="December 12, 2026 · Newcastle, Australia"
+        subtitle="November 26, 2026 · Hunter Valley, Australia"
       />
 
       {/* Countdown */}
@@ -102,10 +102,10 @@ export default function SaveTheDatePage() {
             transition={{ duration: 0.7 }}
           >
             <h2 className="font-serif text-6xl md:text-8xl font-light text-ink tracking-wider mb-6">
-              12<span className="text-gold/60 mx-3">.</span>12<span className="text-gold/60 mx-3">.</span>2026
+              26<span className="text-gold/60 mx-3">.</span>11<span className="text-gold/60 mx-3">.</span>2026
             </h2>
             <p className="font-sans text-[11px] tracking-ultra uppercase text-ink/40 mb-12">
-              Saturday &nbsp;·&nbsp; Newcastle, New South Wales, Australia
+              Thursday &nbsp;·&nbsp; Hunter Valley, New South Wales, Australia
             </p>
 
             <div className="grid sm:grid-cols-2 gap-8 mb-16 text-left">
@@ -114,14 +114,14 @@ export default function SaveTheDatePage() {
                   The Ceremony
                 </span>
                 <p className="font-serif text-xl font-light text-ink mb-2">
-                  Venue TBA
+                  Venue details coming soon
                 </p>
                 <p className="font-sans text-[13px] text-ink/50 font-light">
-                  Newcastle, NSW
+                  Hunter Valley, NSW
                 </p>
                 <div className="h-px bg-gold/20 my-4" />
                 <p className="font-sans text-[13px] text-ink/40 font-light">
-                  Time to be confirmed
+                  Ceremony on 26 November 2026
                 </p>
               </div>
               <div className="border border-gold/25 bg-white p-8">
@@ -129,14 +129,14 @@ export default function SaveTheDatePage() {
                   The Reception
                 </span>
                 <p className="font-serif text-xl font-light text-ink mb-2">
-                  Venue TBA
+                  Rydges Resort Hunter Valley
                 </p>
                 <p className="font-sans text-[13px] text-ink/50 font-light">
-                  Newcastle, NSW
+                  430 Wine Country Drive, Lovedale NSW 2325
                 </p>
                 <div className="h-px bg-gold/20 my-4" />
                 <p className="font-sans text-[13px] text-ink/40 font-light">
-                  Time to be confirmed
+                  Western-inspired reception, evening celebration
                 </p>
               </div>
             </div>
