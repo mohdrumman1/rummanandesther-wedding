@@ -1,0 +1,35 @@
+import { Routes, Route, useLocation } from 'react-router-dom'
+import { AnimatePresence } from 'framer-motion'
+import Nav from './components/Nav'
+import Footer from './components/Footer'
+import Home from './pages/Home'
+import SaveTheDatePage from './pages/SaveTheDatePage'
+import EventsPage from './pages/EventsPage'
+import DressCodePage from './pages/DressCodePage'
+import RegistryPage from './pages/RegistryPage'
+import AccommodationPage from './pages/AccommodationPage'
+import RsvpPage from './pages/RsvpPage'
+
+export default function App() {
+  const location = useLocation()
+
+  return (
+    <div className="min-h-screen flex flex-col bg-cream">
+      <Nav />
+      <main className="flex-1">
+        <AnimatePresence mode="wait" initial={false}>
+          <Routes location={location} key={location.pathname}>
+            <Route path="/" element={<Home />} />
+            <Route path="/save-the-date" element={<SaveTheDatePage />} />
+            <Route path="/events" element={<EventsPage />} />
+            <Route path="/dress-code" element={<DressCodePage />} />
+            <Route path="/registry" element={<RegistryPage />} />
+            <Route path="/accommodation" element={<AccommodationPage />} />
+            <Route path="/rsvp" element={<RsvpPage />} />
+          </Routes>
+        </AnimatePresence>
+      </main>
+      <Footer />
+    </div>
+  )
+}
