@@ -36,8 +36,9 @@ export default function Home() {
           />
         </motion.div>
 
-        {/* Layered overlay: dark bottom-to-top gradient for text legibility */}
+        {/* Layered overlays for text legibility */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-black/20" />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-transparent to-transparent" />
 
         {/* Hero content */}
         <motion.div
@@ -51,11 +52,14 @@ export default function Home() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.9, delay: 0.3 }}
           >
-            <span className="h-px w-20 bg-gold/60" />
-            <span className="font-sans text-[10px] tracking-extreme uppercase text-gold/80">
+            <span className="h-px w-20 bg-white/50" />
+            <span
+              className="font-sans text-[10px] tracking-extreme uppercase text-white/90"
+              style={{ textShadow: '0 1px 8px rgba(0,0,0,0.7)' }}
+            >
               You're invited to the wedding of
             </span>
-            <span className="h-px w-20 bg-gold/60" />
+            <span className="h-px w-20 bg-white/50" />
           </motion.div>
 
           {/* Main title */}
@@ -127,9 +131,10 @@ export default function Home() {
             transition={{ duration: 0.9, ease: 'easeOut' }}
           >
             <div
-              className="aspect-[3/4] bg-cover bg-center bg-stone-300"
+              className="aspect-[3/4] bg-cover bg-stone-300"
               style={{
                 backgroundImage: `url('/images/welcome.jpg'), linear-gradient(180deg, #d6cfc5 0%, #afa89e 100%)`,
+                backgroundPosition: '20% center',
                 filter: 'grayscale(100%)',
               }}
             />
