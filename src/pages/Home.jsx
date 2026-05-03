@@ -242,8 +242,8 @@ export default function Home() {
 
         <div className="max-w-4xl mx-auto grid md:grid-cols-2 gap-8">
           {[
-            { title: 'The Ceremony', icon: '◆', desc: 'A beautiful ceremony in Hunter Valley on 26 November 2026. Full venue details will be shared soon.' },
-            { title: 'The Reception', icon: '◆', desc: 'A western-inspired reception at Rydges Resort Hunter Valley with food, music, and dancing.' },
+            { title: 'The Ceremony', icon: '◆', desc: 'A beautiful ceremony in Hunter Valley. Full venue details will be shared soon.', date: 'November 26, 2026' },
+            { title: 'The Reception', icon: '◆', desc: 'A western-inspired reception at Rydges Resort Hunter Valley with food, music, and dancing.', date: 'December 12, 2026' },
           ].map((event, i) => (
             <motion.div
               key={event.title}
@@ -261,7 +261,7 @@ export default function Home() {
                 {event.desc}
               </p>
               <p className="font-sans text-[10px] tracking-ultra uppercase text-gold">
-                November 26, 2026
+                {event.date}
               </p>
             </motion.div>
           ))}

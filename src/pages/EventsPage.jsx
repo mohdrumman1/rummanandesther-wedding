@@ -24,7 +24,7 @@ const events = [
     venue: 'Rydges Resort Hunter Valley',
     address: '430 Wine Country Drive, Lovedale NSW 2325',
     time: 'Western-inspired evening reception',
-    date: 'Thursday, November 26, 2026',
+    date: 'Saturday, December 12, 2026',
     description:
       'Celebrate with us at a western-inspired reception at Rydges Hunter Valley, with food, music, and dancing under the stars.',
   },
@@ -35,7 +35,7 @@ export default function EventsPage() {
     <motion.div variants={pageVariants} initial="initial" animate="animate" exit="exit">
       <PageHeader
         title="Events"
-        subtitle="Thursday, November 26, 2026 · Hunter Valley, Australia"
+        subtitle="Ceremony: Nov 26 · Reception: Dec 12, 2026 · Hunter Valley, Australia"
       />
 
       {/* Event cards */}
@@ -56,7 +56,7 @@ export default function EventsPage() {
                 <div className="bg-burgundy text-white p-10 flex flex-col justify-center">
                   <span className="text-gold/50 text-3xl block mb-5">{event.icon}</span>
                   <p className="font-sans text-[10px] tracking-extreme uppercase text-gold/70 mb-2">
-                    November 26, 2026
+                    {event.date}
                   </p>
                   <h2 className="font-serif text-3xl md:text-4xl font-light text-white mb-1">
                     The {event.type}

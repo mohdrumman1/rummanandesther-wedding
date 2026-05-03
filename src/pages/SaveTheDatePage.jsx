@@ -136,7 +136,7 @@ export default function SaveTheDatePage() {
                 </p>
                 <div className="h-px bg-gold/20 my-4" />
                 <p className="font-sans text-[13px] text-ink/40 font-light">
-                  Western-inspired reception, evening celebration
+                  Saturday, 12 December 2026
                 </p>
               </div>
             </div>
