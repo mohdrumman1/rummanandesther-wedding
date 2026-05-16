@@ -8,10 +8,6 @@ const pageVariants = {
   exit: { opacity: 0, y: -16, transition: { duration: 0.3 } },
 }
 
-// Replace YOUR_FORM_ID with your Formspree form ID
-// 1. Go to https://formspree.io and create a free account
-// 2. Create a new form and copy the form ID (e.g. "xrgjebyp")
-// 3. Paste it here: https://formspree.io/f/YOUR_FORM_ID
 const FORMSPREE_ENDPOINT = 'https://formspree.io/f/YOUR_FORM_ID'
 
 const inputClass =
@@ -19,8 +15,67 @@ const inputClass =
 
 const labelClass = 'block font-sans text-[10px] tracking-extreme uppercase text-ink/50 mb-2'
 
+function EventSection({ title, date, namePrefix }) {
+  return (
+    <div className="border border-gold/25 bg-white p-8 space-y-6">
+      <div>
+        <div className="flex items-center gap-3 mb-1">
+          <span className="h-px w-6 bg-gold flex-shrink-0" />
+          <span className="font-sans text-[10px] tracking-extreme uppercase text-gold">
+            {title}
+          </span>
+        </div>
+        <p className="font-sans text-[12px] text-ink/40 font-light mt-2 ml-9">{date}</p>
+      </div>
+
+      <div>
+        <label className={labelClass}>Will you be attending?</label>
+        <div className="grid grid-cols-2 gap-4">
+          {[
+            { value: 'yes', label: 'Joyfully accepts' },
+            { value: 'no', label: 'Regretfully declines' },
+          ].map(opt => (
+            <label
+              key={opt.value}
+              className="flex items-center gap-3 border border-gold/25 bg-cream px-5 py-4 cursor-pointer hover:border-gold transition-colors duration-200 group"
+            >
+              <input
+                type="radio"
+                name={`${namePrefix}_attending`}
+                value={opt.value}
+                required
+                className="accent-burgundy w-4 h-4 flex-shrink-0"
+              />
+              <span className="font-sans text-[13px] font-light text-ink/70 group-hover:text-ink transition-colors">
+                {opt.label}
+              </span>
+            </label>
+          ))}
+        </div>
+      </div>
+
+      <div>
+        <label htmlFor={`${namePrefix}_guests`} className={labelClass}>
+          Number of Guests (including yourself)
+        </label>
+        <select
+          id={`${namePrefix}_guests`}
+          name={`${namePrefix}_guests`}
+          className={inputClass}
+          defaultValue=""
+        >
+          <option value="" disabled>Select number of guests</option>
+          {[1, 2, 3, 4].map(n => (
+            <option key={n} value={n}>{n}</option>
+          ))}
+        </select>
+      </div>
+    </div>
+  )
+}
+
 export default function RsvpPage() {
-  const [status, setStatus] = useState('idle') // idle | loading | success | error
+  const [status, setStatus] = useState('idle')
 
   async function handleSubmit(e) {
     e.preventDefault()
@@ -103,48 +158,19 @@ export default function RsvpPage() {
                 />
               </div>
 
-              {/* Attending */}
-              <div>
-                <label className={labelClass}>Will you be attending?</label>
-                <div className="grid grid-cols-2 gap-4">
-                  {[
-                    { value: 'yes', label: 'Joyfully accepts' },
-                    { value: 'no', label: 'Regretfully declines' },
-                  ].map(opt => (
-                    <label
-                      key={opt.value}
-                      className="flex items-center gap-3 border border-gold/25 bg-white px-5 py-4 cursor-pointer hover:border-gold transition-colors duration-200 group"
-                    >
-                      <input
-                        type="radio"
-                        name="attending"
-                        value={opt.value}
-                        required
-                        className="accent-burgundy w-4 h-4 flex-shrink-0"
-                      />
-                      <span className="font-sans text-[13px] font-light text-ink/70 group-hover:text-ink transition-colors">
-                        {opt.label}
-                      </span>
-                    </label>
-                  ))}
-                </div>
-              </div>
+              {/* Sangeet RSVP */}
+              <EventSection
+                title="The Sangeet"
+                date="Friday, December 11, 2026 · 11 Redmond Cct, Cameron Park NSW"
+                namePrefix="sangeet"
+              />
 
-              {/* Number of guests */}
-              <div>
-                <label htmlFor="guests" className={labelClass}>Number of Guests (including yourself)</label>
-                <select
-                  id="guests"
-                  name="guests"
-                  className={inputClass}
-                  defaultValue=""
-                >
-                  <option value="" disabled>Select number of guests</option>
-                  {[1, 2, 3, 4].map(n => (
-                    <option key={n} value={n}>{n}</option>
-                  ))}
-                </select>
-              </div>
+              {/* Ceremony & Reception RSVP */}
+              <EventSection
+                title="The Ceremony & Reception"
+                date="Saturday, December 12, 2026 · Hunter Valley, NSW"
+                namePrefix="ceremony"
+              />
 
               {/* Dietary */}
               <div>
@@ -199,18 +225,18 @@ export default function RsvpPage() {
             </p>
             <div className="flex flex-col sm:flex-row justify-center gap-6">
               <a
-                href="tel:+61490800395"
+                href="tel:+610474199245"
                 className="flex items-center gap-3 font-sans font-light text-[14px] text-ink/60 hover:text-ink transition-colors"
               >
                 <span className="text-gold/60">✆</span>
-                (+61) 490 800 395
+                0474 199 245
               </a>
               <a
-                href="mailto:estherabraham2812@gmail.com"
+                href="mailto:mohdrumman1@gmail.com"
                 className="flex items-center gap-3 font-sans font-light text-[14px] text-ink/60 hover:text-ink transition-colors"
               >
                 <span className="text-gold/60">✉</span>
-                estherabraham2812@gmail.com
+                mohdrumman1@gmail.com
               </a>
             </div>
           </motion.div>

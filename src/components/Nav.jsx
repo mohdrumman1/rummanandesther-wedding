@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Link, NavLink } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 
@@ -13,11 +13,21 @@ const navLinks = [
 ]
 
 export default function Nav() {
-  const [scrolled, setScrolled] = useState(false)
+  const [visible, setVisible] = useState(true)
   const [menuOpen, setMenuOpen] = useState(false)
+  const lastScrollY = useRef(0)
+  const scrolled = true
 
   useEffect(() => {
-    const handleScroll = () => setScrolled(window.scrollY > 60)
+    const handleScroll = () => {
+      const currentY = window.scrollY
+      if (currentY < 60) {
+        setVisible(true)
+      } else {
+        setVisible(currentY < lastScrollY.current)
+      }
+      lastScrollY.current = currentY
+    }
     window.addEventListener('scroll', handleScroll, { passive: true })
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
@@ -41,8 +51,8 @@ export default function Nav() {
           scrolled ? 'bg-cream/96 backdrop-blur-sm shadow-sm' : 'bg-transparent'
         }`}
         initial={{ opacity: 0, y: -16 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.7, ease: 'easeOut' }}
+        animate={{ opacity: 1, y: visible ? 0 : -100 }}
+        transition={{ duration: 0.4, ease: 'easeInOut' }}
       >
         <div className="max-w-7xl mx-auto px-6 lg:px-10 py-5 flex items-center justify-between">
 

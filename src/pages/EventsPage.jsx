@@ -9,12 +9,22 @@ const pageVariants = {
 
 const events = [
   {
+    type: 'Sangeet',
+    icon: '◇',
+    venue: 'Our Home',
+    address: '11 Redmond Cct, Cameron Park NSW',
+    time: 'An evening of dancing and singing',
+    date: 'Friday, December 11, 2026',
+    description:
+      'Join us the night before the wedding for the Sangeet: a joyful evening of dancing, singing, and celebration at our home.',
+  },
+  {
     type: 'Ceremony',
     icon: '◇',
     venue: 'Venue details coming soon',
     address: 'Hunter Valley, NSW, Australia',
-    time: 'Ceremony begins at 26 November 2026',
-    date: 'Thursday, November 26, 2026',
+    time: 'Ceremony begins on 12 December 2026',
+    date: 'Saturday, December 12, 2026',
     description:
       'Join us as we exchange our vows in Hunter Valley. Venue and time details will be shared soon.',
   },
@@ -35,7 +45,7 @@ export default function EventsPage() {
     <motion.div variants={pageVariants} initial="initial" animate="animate" exit="exit">
       <PageHeader
         title="Events"
-        subtitle="Ceremony: Nov 26 · Reception: Dec 12, 2026 · Hunter Valley, Australia"
+        subtitle="Sangeet: Dec 11 · Ceremony &amp; Reception: Dec 12, 2026"
       />
 
       {/* Event cards */}

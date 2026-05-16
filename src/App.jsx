@@ -2,6 +2,7 @@ import { Routes, Route, useLocation } from 'react-router-dom'
 import { AnimatePresence } from 'framer-motion'
 import Nav from './components/Nav'
 import Footer from './components/Footer'
+import ScrollToTop from './components/ScrollToTop'
 import Home from './pages/Home'
 import SaveTheDatePage from './pages/SaveTheDatePage'
 import EventsPage from './pages/EventsPage'
@@ -15,6 +16,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen flex flex-col bg-cream">
+      <ScrollToTop />
       <Nav />
       <main className="flex-1">
         <AnimatePresence mode="wait" initial={false}>

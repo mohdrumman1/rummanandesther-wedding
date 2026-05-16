@@ -81,7 +81,7 @@ export default function Home() {
           >
             <span className="h-px w-12 bg-gold/50" />
             <p className="font-sans text-sm tracking-ultra uppercase text-white/75">
-              26 November, 2026
+              12 December, 2026
             </p>
             <span className="h-px w-12 bg-gold/50" />
           </motion.div>
@@ -163,15 +163,15 @@ export default function Home() {
               married.
             </h2>
 
-            <p className="font-sans font-light text-[15px] leading-relaxed text-ink/65 mb-5">
-              We welcome you to join us in celebrating the wedding of Rumman and
-              Esther, taking place on 26 November 2026 in Hunter Valley,
-              Australia.
+            <p className="font-sans font-light text-[15px] leading-relaxed text-ink/75 mb-5">
+              After years together, we're making it official. And we want the
+              people we love most there to witness it. The wedding takes place on
+              12 December 2026 in the stunning Hunter Valley, NSW.
             </p>
-            <p className="font-sans font-light text-[15px] leading-relaxed text-ink/65 mb-10">
-              Whether near or far, your love and support have been part of our
-              journey. We would be so happy to share this special time with you —
-              a celebration filled with love, laughter, dancing, and joy.
+            <p className="font-sans font-light text-[15px] leading-relaxed text-ink/75 mb-10">
+              We're planning a weekend to remember: a Sangeet the night before,
+              vows in the vineyard, and a reception that goes all night. Come
+              ready to celebrate.
             </p>
 
             <Link
@@ -206,7 +206,7 @@ export default function Home() {
           </div>
 
           <h2 className="font-serif text-6xl md:text-8xl lg:text-9xl font-light tracking-widest mb-5 text-white">
-            26.11.2026
+            12.12.2026
           </h2>
 
           <p className="font-sans text-[11px] tracking-ultra uppercase text-white/50 mb-10">
@@ -235,15 +235,16 @@ export default function Home() {
               The Celebration
             </p>
             <h2 className="font-serif text-4xl md:text-5xl font-light text-ink">
-              Two beautiful events
+              Three beautiful events
             </h2>
           </motion.div>
         </div>
 
-        <div className="max-w-4xl mx-auto grid md:grid-cols-2 gap-8">
+        <div className="max-w-4xl mx-auto grid md:grid-cols-3 gap-8">
           {[
-            { title: 'The Ceremony', icon: '◆', desc: 'A beautiful ceremony in Hunter Valley. Full venue details will be shared soon.', date: 'November 26, 2026' },
-            { title: 'The Reception', icon: '◆', desc: 'A western-inspired reception at Rydges Resort Hunter Valley with food, music, and dancing.', date: 'December 12, 2026' },
+            { title: 'The Sangeet', icon: '◆', desc: 'Kick off the celebrations the night before: music, dancing, and good company at our home in Cameron Park.', date: 'December 11, 2026' },
+            { title: 'The Ceremony', icon: '◆', desc: 'We say our vows surrounded by the rolling vineyards of Hunter Valley. Venue details coming very soon.', date: 'December 12, 2026' },
+            { title: 'The Reception', icon: '◆', desc: 'A western-inspired night at Rydges Resort Hunter Valley. Great food, great music, and dancing till late.', date: 'December 12, 2026' },
           ].map((event, i) => (
             <motion.div
               key={event.title}
@@ -257,7 +258,7 @@ export default function Home() {
               <span className="text-gold/50 text-2xl block mb-5">{event.icon}</span>
               <h3 className="font-serif text-2xl font-light text-ink mb-4">{event.title}</h3>
               <div className="h-px bg-gold/20 mb-5" />
-              <p className="font-sans font-light text-[14px] text-ink/50 leading-relaxed mb-6">
+              <p className="font-sans font-light text-[14px] text-ink/70 leading-relaxed mb-6">
                 {event.desc}
               </p>
               <p className="font-sans text-[10px] tracking-ultra uppercase text-gold">
