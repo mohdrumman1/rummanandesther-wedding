@@ -1,7 +1,18 @@
-const DEFAULT_API_BASE_URL = 'http://localhost:8787'
+const PRODUCTION_API_BASE_URL = 'https://rummanandesther-rsvp.rumman-formaai.workers.dev'
+const LOCAL_API_BASE_URL = 'http://localhost:8787'
+
+function defaultApiBaseUrl() {
+  if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
+    return LOCAL_API_BASE_URL
+  }
+  if (typeof window !== 'undefined' && window.location.hostname === '127.0.0.1') {
+    return LOCAL_API_BASE_URL
+  }
+  return PRODUCTION_API_BASE_URL
+}
 
 export const RSVP_API_BASE_URL =
-  import.meta.env.VITE_RSVP_API_BASE_URL || DEFAULT_API_BASE_URL
+  import.meta.env.VITE_RSVP_API_BASE_URL || defaultApiBaseUrl()
 
 const ADMIN_TOKEN_KEY = 'rsvp_admin_token'
 
