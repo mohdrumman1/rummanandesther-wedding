@@ -372,7 +372,7 @@ function GroupTable({ groups, filter, onEdit, onDelete }) {
                   <td className="px-4 py-5">
                     <button
                       type="button"
-                      onClick={() => navigator.clipboard.writeText(`Dear ${group.householdName},\n\nPlease RSVP using your personal link:\n${inviteLink}`)}
+                      onClick={() => navigator.clipboard.writeText(`Hi ${group.householdName},\n\nWe'd love to invite you to our wedding. Please click the link below to RSVP:\n\n${inviteLink}\n\nWith love,\nRumman & Esther`)}
                       className="font-sans text-[10px] tracking-ultra uppercase text-burgundy"
                     >
                       Copy Invite
