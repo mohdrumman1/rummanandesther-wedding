@@ -1,6 +1,9 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { Link, useParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import PageHeader from '../components/PageHeader'
+import { fetchRsvp, submitRsvp } from '../lib/rsvpApi'
+import { isAnswered, responseText } from '../lib/rsvpUtils'
 
 const pageVariants = {
   initial: { opacity: 0, y: 16 },
@@ -8,93 +11,328 @@ const pageVariants = {
   exit: { opacity: 0, y: -16, transition: { duration: 0.3 } },
 }
 
-const FORMSPREE_ENDPOINT = 'https://formspree.io/f/YOUR_FORM_ID'
-
 const inputClass =
   'w-full bg-white border border-gold/25 text-ink font-sans text-[14px] font-light px-5 py-4 focus:outline-none focus:border-gold transition-colors duration-200 placeholder:text-ink/30'
 
 const labelClass = 'block font-sans text-[10px] tracking-extreme uppercase text-ink/50 mb-2'
 
-function EventSection({ title, date, namePrefix }) {
+function RsvpFallback() {
   return (
-    <div className="border border-gold/25 bg-white p-8 space-y-6">
+    <motion.div variants={pageVariants} initial="initial" animate="animate" exit="exit">
+      <PageHeader title="RSVP" subtitle="Your personal RSVP link is on your invitation" />
+      <section className="py-24 px-6 bg-cream">
+        <div className="max-w-2xl mx-auto text-center">
+          <span className="text-gold text-5xl block mb-8">◆</span>
+          <h2 className="font-serif text-4xl md:text-5xl font-light text-ink mb-6">
+            Please use your invitation link
+          </h2>
+          <p className="font-sans font-light text-[15px] text-ink/60 leading-relaxed">
+            Each household has a personal RSVP link so we can show the right names and details.
+            If you cannot find yours, contact us and we will help.
+          </p>
+          <div className="mt-12 flex flex-col sm:flex-row justify-center gap-5">
+            <a
+              href="tel:+610474199245"
+              className="font-sans text-[10px] tracking-extreme uppercase border border-gold/40 px-8 py-4 text-ink hover:border-gold transition-colors"
+            >
+              Call Rumman
+            </a>
+            <a
+              href="mailto:mohdrumman1@gmail.com?subject=RSVP%20link%20help"
+              className="font-sans text-[10px] tracking-extreme uppercase bg-burgundy text-white px-8 py-4 hover:bg-burgundy-dark transition-colors"
+            >
+              Email for help
+            </a>
+          </div>
+        </div>
+      </section>
+    </motion.div>
+  )
+}
+
+function LoadingState() {
+  return (
+    <section className="py-24 px-6 bg-cream min-h-[52vh] flex items-center">
+      <div className="max-w-2xl mx-auto text-center">
+        <div className="mx-auto h-10 w-10 border border-gold/30 border-t-gold rounded-full animate-spin" />
+        <p className="mt-8 font-sans text-[10px] tracking-extreme uppercase text-gold">
+          Opening your RSVP
+        </p>
+      </div>
+    </section>
+  )
+}
+
+function ErrorState({ message }) {
+  return (
+    <section className="py-24 px-6 bg-cream">
+      <div className="max-w-2xl mx-auto text-center">
+        <span className="text-gold text-5xl block mb-8">◆</span>
+        <h2 className="font-serif text-4xl font-light text-ink mb-4">We could not open this link</h2>
+        <p className="font-sans font-light text-[15px] text-ink/60 leading-relaxed">
+          {message || 'Please check the invitation link, or contact us and we will help.'}
+        </p>
+        <Link
+          to="/rsvp"
+          className="inline-block mt-10 font-sans text-[10px] tracking-extreme uppercase border border-gold/40 px-8 py-4 text-ink hover:border-gold transition-colors"
+        >
+          RSVP Help
+        </Link>
+      </div>
+    </section>
+  )
+}
+
+function AttendanceButton({ selected, children, onClick }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`h-12 border px-4 font-sans text-[11px] tracking-ultra uppercase transition-colors ${
+        selected
+          ? 'border-burgundy bg-burgundy text-white'
+          : 'border-gold/25 bg-cream text-ink/65 hover:border-gold hover:text-ink'
+      }`}
+    >
+      {children}
+    </button>
+  )
+}
+
+function GuestCard({ guest, onChange }) {
+  const canCountChildren = guest.childrenAllowed && guest.ceremonyAttending === true
+
+  return (
+    <div className="border border-gold/25 bg-white p-6 md:p-7 space-y-5">
+      <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+        <div>
+          <h3 className="font-serif text-2xl font-light text-ink">{guest.name}</h3>
+          <p className="font-sans text-[12px] text-ink/45 font-light">
+            Sangeet: {responseText(guest.sangeetAttending)} · Ceremony: {responseText(guest.ceremonyAttending)}
+          </p>
+        </div>
+        {guest.isAdditional && (
+          <span className="self-start font-sans text-[10px] tracking-ultra uppercase text-gold border border-gold/30 px-3 py-2">
+            Additional guest
+          </span>
+        )}
+      </div>
+
+      <div className="grid gap-5 md:grid-cols-2">
+        <div>
+          <label className={labelClass}>Sangeet</label>
+          <div className="grid grid-cols-2 gap-3">
+            <AttendanceButton
+              selected={guest.sangeetAttending === true}
+              onClick={() => onChange({ ...guest, sangeetAttending: true })}
+            >
+              Yes
+            </AttendanceButton>
+            <AttendanceButton
+              selected={guest.sangeetAttending === false}
+              onClick={() => onChange({ ...guest, sangeetAttending: false })}
+            >
+              No
+            </AttendanceButton>
+          </div>
+        </div>
+        <div>
+          <label className={labelClass}>Ceremony & Reception</label>
+          <div className="grid grid-cols-2 gap-3">
+            <AttendanceButton
+              selected={guest.ceremonyAttending === true}
+              onClick={() => onChange({ ...guest, ceremonyAttending: true })}
+            >
+              Yes
+            </AttendanceButton>
+            <AttendanceButton
+              selected={guest.ceremonyAttending === false}
+              onClick={() => onChange({ ...guest, ceremonyAttending: false, childrenCount: 0 })}
+            >
+              No
+            </AttendanceButton>
+          </div>
+        </div>
+      </div>
+
+      {guest.childrenAllowed && (
+        <div className="pt-5 border-t border-gold/15">
+          <label className={labelClass}>Children attending Ceremony & Reception</label>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              disabled={!canCountChildren || guest.childrenCount <= 0}
+              onClick={() => onChange({ ...guest, childrenCount: Math.max(0, guest.childrenCount - 1) })}
+              className="h-11 w-11 border border-gold/25 bg-cream text-ink disabled:opacity-35"
+              aria-label={`Decrease children for ${guest.name}`}
+            >
+              -
+            </button>
+            <span className="w-10 text-center font-serif text-2xl text-ink">{guest.childrenCount || 0}</span>
+            <button
+              type="button"
+              disabled={!canCountChildren || guest.childrenCount >= guest.maxChildren}
+              onClick={() => onChange({ ...guest, childrenCount: Math.min(guest.maxChildren, guest.childrenCount + 1) })}
+              className="h-11 w-11 border border-gold/25 bg-cream text-ink disabled:opacity-35"
+              aria-label={`Increase children for ${guest.name}`}
+            >
+              +
+            </button>
+            {!canCountChildren && (
+              <span className="font-sans text-[12px] text-ink/45 font-light">
+                Select yes for Ceremony & Reception to add children.
+              </span>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function AdditionalGuestForm({ remaining, pending, setPending }) {
+  const [name, setName] = useState('')
+
+  function addGuest() {
+    const trimmed = name.trim().replace(/\s+/g, ' ')
+    if (!trimmed || pending.length >= remaining) return
+    setPending([...pending, trimmed])
+    setName('')
+  }
+
+  if (remaining <= 0 && pending.length === 0) return null
+
+  return (
+    <div className="border border-gold/25 bg-white p-7 space-y-5">
       <div>
         <div className="flex items-center gap-3 mb-1">
           <span className="h-px w-6 bg-gold flex-shrink-0" />
           <span className="font-sans text-[10px] tracking-extreme uppercase text-gold">
-            {title}
+            Additional Guests
           </span>
         </div>
-        <p className="font-sans text-[12px] text-ink/40 font-light mt-2 ml-9">{date}</p>
+        <p className="font-sans text-[13px] text-ink/50 font-light mt-3 ml-9">
+          {remaining > 0
+            ? `You can add ${remaining} more guest${remaining === 1 ? '' : 's'} to this RSVP.`
+            : 'No additional guest spots remain.'}
+        </p>
       </div>
 
-      <div>
-        <label className={labelClass}>Will you be attending?</label>
-        <div className="grid grid-cols-2 gap-4">
-          {[
-            { value: 'yes', label: 'Joyfully accepts' },
-            { value: 'no', label: 'Regretfully declines' },
-          ].map(opt => (
-            <label
-              key={opt.value}
-              className="flex items-center gap-3 border border-gold/25 bg-cream px-5 py-4 cursor-pointer hover:border-gold transition-colors duration-200 group"
-            >
-              <input
-                type="radio"
-                name={`${namePrefix}_attending`}
-                value={opt.value}
-                required
-                className="accent-burgundy w-4 h-4 flex-shrink-0"
-              />
-              <span className="font-sans text-[13px] font-light text-ink/70 group-hover:text-ink transition-colors">
-                {opt.label}
-              </span>
-            </label>
+      {pending.length > 0 && (
+        <div className="space-y-3">
+          {pending.map((guestName, index) => (
+            <div key={`${guestName}-${index}`} className="flex items-center justify-between border border-gold/20 bg-cream px-4 py-3">
+              <span className="font-sans text-[13px] text-ink/70">{guestName}</span>
+              <button
+                type="button"
+                onClick={() => setPending(pending.filter((_, itemIndex) => itemIndex !== index))}
+                className="font-sans text-[10px] tracking-ultra uppercase text-burgundy"
+              >
+                Remove
+              </button>
+            </div>
           ))}
         </div>
-      </div>
+      )}
 
-      <div>
-        <label htmlFor={`${namePrefix}_guests`} className={labelClass}>
-          Number of Guests (including yourself)
-        </label>
-        <select
-          id={`${namePrefix}_guests`}
-          name={`${namePrefix}_guests`}
-          className={inputClass}
-          defaultValue=""
-        >
-          <option value="" disabled>Select number of guests</option>
-          {[1, 2, 3, 4].map(n => (
-            <option key={n} value={n}>{n}</option>
-          ))}
-        </select>
-      </div>
+      {remaining > pending.length && (
+        <div>
+          <label htmlFor="additionalGuest" className={labelClass}>Guest name</label>
+          <div className="flex flex-col sm:flex-row gap-3">
+            <input
+              id="additionalGuest"
+              value={name}
+              onChange={event => setName(event.target.value)}
+              onKeyDown={event => {
+                if (event.key === 'Enter') {
+                  event.preventDefault()
+                  addGuest()
+                }
+              }}
+              placeholder="Full name"
+              className={inputClass}
+            />
+            <button
+              type="button"
+              onClick={addGuest}
+              disabled={!name.trim()}
+              className="sm:w-36 font-sans text-[10px] tracking-extreme uppercase bg-ink text-white px-6 py-4 disabled:opacity-40"
+            >
+              Add
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
 
 export default function RsvpPage() {
-  const [status, setStatus] = useState('idle')
+  const { accessCode } = useParams()
+  const [group, setGroup] = useState(null)
+  const [guests, setGuests] = useState([])
+  const [dietaryRequirements, setDietaryRequirements] = useState('')
+  const [message, setMessage] = useState('')
+  const [pendingAdditional, setPendingAdditional] = useState([])
+  const [status, setStatus] = useState(accessCode ? 'loading' : 'idle')
+  const [error, setError] = useState('')
 
-  async function handleSubmit(e) {
-    e.preventDefault()
-    setStatus('loading')
-    try {
-      const data = new FormData(e.target)
-      const res = await fetch(FORMSPREE_ENDPOINT, {
-        method: 'POST',
-        body: data,
-        headers: { Accept: 'application/json' },
+  useEffect(() => {
+    if (!accessCode) return
+    let active = true
+    fetchRsvp(accessCode)
+      .then(data => {
+        if (!active) return
+        setGroup(data)
+        setGuests(data.guests || [])
+        setDietaryRequirements(data.rsvp?.dietaryRequirements || '')
+        setMessage(data.rsvp?.message || '')
+        setStatus('ready')
       })
-      if (res.ok) {
-        setStatus('success')
-        e.target.reset()
-      } else {
+      .catch(err => {
+        if (!active) return
+        setError(err.message)
         setStatus('error')
-      }
-    } catch {
-      setStatus('error')
+      })
+    return () => { active = false }
+  }, [accessCode])
+
+  const existingAdditional = useMemo(
+    () => guests.filter(guest => guest.isAdditional).length,
+    [guests],
+  )
+  const remainingAdditional = Math.max(0, (group?.plusOneLimit || 0) - existingAdditional)
+
+  if (!accessCode) return <RsvpFallback />
+
+  async function handleSubmit(event) {
+    event.preventDefault()
+    setError('')
+    const incomplete = guests.filter(guest =>
+      !isAnswered(guest.sangeetAttending) || !isAnswered(guest.ceremonyAttending)
+    )
+    if (incomplete.length) {
+      setError('Please respond yes or no for each guest and each event before submitting.')
+      return
+    }
+    setStatus('saving')
+    try {
+      const result = await submitRsvp(accessCode, {
+        guests,
+        additionalGuests: pendingAdditional,
+        dietaryRequirements,
+        message,
+      })
+      setGroup(result.group)
+      setGuests(result.group.guests || [])
+      setDietaryRequirements(result.group.rsvp?.dietaryRequirements || '')
+      setMessage(result.group.rsvp?.message || '')
+      setPendingAdditional([])
+      setStatus('submitted')
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    } catch (err) {
+      setError(err.message)
+      setStatus('ready')
     }
   }
 
@@ -102,146 +340,102 @@ export default function RsvpPage() {
     <motion.div variants={pageVariants} initial="initial" animate="animate" exit="exit">
       <PageHeader
         title="RSVP"
-        subtitle="Please respond by August 15, 2026"
+        subtitle={group ? `For ${group.householdName}` : 'Opening your personal RSVP'}
       />
 
-      <section className="py-24 px-6 bg-cream">
-        <div className="max-w-2xl mx-auto">
+      {status === 'loading' && <LoadingState />}
+      {status === 'error' && <ErrorState message={error} />}
 
-          {status === 'success' ? (
-            <motion.div
-              className="text-center py-20"
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.5 }}
-            >
-              <span className="text-gold text-5xl block mb-8">◆</span>
-              <h2 className="font-serif text-4xl font-light text-ink mb-4">
-                Thank you!
-              </h2>
-              <p className="font-sans font-light text-[15px] text-ink/60 leading-relaxed">
-                We've received your RSVP and can't wait to celebrate with you.
-                We'll be in touch with more details as the date approaches.
-              </p>
-            </motion.div>
-          ) : (
-            <motion.form
-              onSubmit={handleSubmit}
-              initial={{ opacity: 0, y: 24 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.2 }}
-              className="space-y-7"
-            >
-              {/* Full name */}
-              <div>
-                <label htmlFor="name" className={labelClass}>Full Name</label>
-                <input
-                  id="name"
-                  name="name"
-                  type="text"
-                  required
-                  placeholder="Your full name"
-                  className={inputClass}
-                />
+      {(status === 'ready' || status === 'saving' || status === 'submitted') && group && (
+        <section className="py-20 md:py-24 px-6 bg-cream">
+          <div className="max-w-3xl mx-auto">
+            {status === 'submitted' && (
+              <motion.div
+                className="mb-10 border border-gold/30 bg-white px-6 py-7 text-center"
+                initial={{ opacity: 0, scale: 0.97 }}
+                animate={{ opacity: 1, scale: 1 }}
+              >
+                <span className="text-gold text-3xl block mb-4">◆</span>
+                <h2 className="font-serif text-3xl font-light text-ink mb-2">Thank you</h2>
+                <p className="font-sans text-[14px] font-light text-ink/60 leading-relaxed">
+                  Your RSVP has been saved. You can return to this same link to make changes before August 15, 2026.
+                </p>
+              </motion.div>
+            )}
+
+            <form onSubmit={handleSubmit} className="space-y-7">
+              <div className="border border-gold/25 bg-white p-8">
+                <div className="flex items-center gap-3 mb-4">
+                  <span className="h-px w-8 bg-gold flex-shrink-0" />
+                  <span className="font-sans text-[10px] tracking-extreme uppercase text-gold">
+                    Personal RSVP
+                  </span>
+                </div>
+                <h2 className="font-serif text-4xl md:text-5xl font-light text-ink mb-4">
+                  {group.householdName}
+                </h2>
+                <p className="font-sans font-light text-[15px] text-ink/60 leading-relaxed">
+                  Please respond for each person listed below. If plans change, you can return to this link and update your RSVP.
+                </p>
               </div>
 
-              {/* Email */}
-              <div>
-                <label htmlFor="email" className={labelClass}>Email Address</label>
-                <input
-                  id="email"
-                  name="email"
-                  type="email"
-                  required
-                  placeholder="your@email.com"
-                  className={inputClass}
+              {guests.map(guest => (
+                <GuestCard
+                  key={guest.id}
+                  guest={guest}
+                  onChange={updated => setGuests(current =>
+                    current.map(item => item.id === updated.id ? updated : item)
+                  )}
                 />
-              </div>
+              ))}
 
-              {/* Sangeet RSVP */}
-              <EventSection
-                title="The Sangeet"
-                date="Friday, December 11, 2026 · 11 Redmond Cct, Cameron Park NSW"
-                namePrefix="sangeet"
+              <AdditionalGuestForm
+                remaining={remainingAdditional}
+                pending={pendingAdditional}
+                setPending={setPendingAdditional}
               />
 
-              {/* Ceremony & Reception RSVP */}
-              <EventSection
-                title="The Ceremony & Reception"
-                date="Saturday, December 12, 2026 · Hunter Valley, NSW"
-                namePrefix="ceremony"
-              />
-
-              {/* Dietary */}
-              <div>
-                <label htmlFor="dietary" className={labelClass}>Dietary Requirements</label>
-                <input
-                  id="dietary"
-                  name="dietary"
-                  type="text"
-                  placeholder="Vegetarian, vegan, halal, allergies, etc."
-                  className={inputClass}
-                />
+              <div className="border border-gold/25 bg-white p-7 space-y-6">
+                <div>
+                  <label htmlFor="dietary" className={labelClass}>Dietary requirements</label>
+                  <input
+                    id="dietary"
+                    value={dietaryRequirements}
+                    onChange={event => setDietaryRequirements(event.target.value)}
+                    placeholder="Vegetarian, vegan, halal, allergies, etc."
+                    className={inputClass}
+                  />
+                </div>
+                <div>
+                  <label htmlFor="message" className={labelClass}>Message (optional)</label>
+                  <textarea
+                    id="message"
+                    value={message}
+                    onChange={event => setMessage(event.target.value)}
+                    rows={4}
+                    placeholder="Leave us a note..."
+                    className={`${inputClass} resize-none`}
+                  />
+                </div>
               </div>
 
-              {/* Message */}
-              <div>
-                <label htmlFor="message" className={labelClass}>Message (optional)</label>
-                <textarea
-                  id="message"
-                  name="message"
-                  rows={4}
-                  placeholder="Leave us a note..."
-                  className={`${inputClass} resize-none`}
-                />
-              </div>
-
-              {status === 'error' && (
+              {error && (
                 <p className="font-sans text-[13px] text-burgundy text-center">
-                  Something went wrong. Please try again or email us directly.
+                  {error}
                 </p>
               )}
 
               <button
                 type="submit"
-                disabled={status === 'loading'}
+                disabled={status === 'saving'}
                 className="w-full font-sans text-[10px] tracking-extreme uppercase bg-burgundy text-white py-5 hover:bg-burgundy-dark disabled:opacity-60 transition-colors duration-300"
               >
-                {status === 'loading' ? 'Sending...' : 'Send RSVP'}
+                {status === 'saving' ? 'Saving...' : 'Save RSVP'}
               </button>
-            </motion.form>
-          )}
-
-          {/* Contact info */}
-          <motion.div
-            className="mt-16 pt-12 border-t border-gold/20 text-center"
-            initial={{ opacity: 0 }}
-            whileInView={{ opacity: 1 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6 }}
-          >
-            <p className="font-sans text-[10px] tracking-extreme uppercase text-gold mb-6">
-              Questions or concerns?
-            </p>
-            <div className="flex flex-col sm:flex-row justify-center gap-6">
-              <a
-                href="tel:+610474199245"
-                className="flex items-center gap-3 font-sans font-light text-[14px] text-ink/60 hover:text-ink transition-colors"
-              >
-                <span className="text-gold/60">✆</span>
-                0474 199 245
-              </a>
-              <a
-                href="mailto:mohdrumman1@gmail.com"
-                className="flex items-center gap-3 font-sans font-light text-[14px] text-ink/60 hover:text-ink transition-colors"
-              >
-                <span className="text-gold/60">✉</span>
-                mohdrumman1@gmail.com
-              </a>
-            </div>
-          </motion.div>
-        </div>
-      </section>
+            </form>
+          </div>
+        </section>
+      )}
     </motion.div>
   )
 }

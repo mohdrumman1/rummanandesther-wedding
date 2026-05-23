@@ -1,0 +1,11 @@
+name = "rummanandesther-rsvp"
+main = "src/index.js"
+compatibility_date = "2026-05-23"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "rummanandesther-rsvp"
+database_id = "4eb3f2c5-8659-4c74-8958-6000734bed01"
+
+[vars]
+ALLOWED_ORIGINS = "http://localhost:5173,http://localhost:5174,https://rummanandesther.com,https://main--rummanandesther.netlify.app"
