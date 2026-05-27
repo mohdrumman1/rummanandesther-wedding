@@ -14,7 +14,7 @@ const hotels = [
     distance: 'At the venue',
     location: 'Lovedale',
     desc: 'Resort accommodation right at the reception venue on Wine Country Drive. No transfers needed.',
-    note: 'Our top recommendation. Book early as rooms fill fast.',
+    note: 'Use Block ID 2612ESTRUM for the wedding accommodation rate.',
     image: 'https://assets.atdw-online.com.au/images/cb51c8a2e2a99198e70898fe84e7e388.jpeg?rect=116%2C0%2C2996%2C2247&w=800&h=600&fm=jpg',
     link: 'https://www.rydges.com/accommodation/regional-nsw/hunter-valley/',
   },
@@ -90,6 +90,14 @@ const hotels = [
   },
 ]
 
+const rydgesSpecialRate = {
+  code: '2612ESTRUM',
+  phone: '+61 4991 0970',
+  bookingName: 'Rumman & Esther Wedding',
+  stayWindow: '8 December 2026 to 16 December 2026',
+  link: 'https://www.rydges.com/accommodation/regional-nsw/hunter-valley/',
+}
+
 export default function AccommodationPage() {
   return (
     <motion.div variants={pageVariants} initial="initial" animate="animate" exit="exit">
@@ -112,6 +120,70 @@ export default function AccommodationPage() {
               Below are some local hotel suggestions sorted by distance from the reception venue.
               Please book early as December is a busy time in the Hunter Valley.
             </p>
+          </motion.div>
+
+          <motion.div
+            className="border border-gold/35 bg-white mb-12 overflow-hidden"
+            initial={{ opacity: 0, y: 24 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.7 }}
+          >
+            <div className="grid lg:grid-cols-[0.9fr_1.3fr]">
+              <div className="bg-burgundy text-white p-8 sm:p-10 flex flex-col justify-center">
+                <span className="font-sans text-[10px] tracking-extreme uppercase text-gold/70 mb-4">
+                  Special accommodation rate
+                </span>
+                <h2 className="font-serif text-3xl sm:text-4xl font-light leading-tight mb-4">
+                  Rydges Resort Hunter Valley
+                </h2>
+                <p className="font-sans font-light text-[14px] text-white/65 leading-relaxed">
+                  A special wedding rate is available for guests staying between{' '}
+                  {rydgesSpecialRate.stayWindow}.
+                </p>
+              </div>
+
+              <div className="p-8 sm:p-10">
+                <div className="grid sm:grid-cols-2 gap-6 mb-8">
+                  <div>
+                    <p className="font-sans text-[10px] tracking-extreme uppercase text-gold mb-2">
+                      Block ID
+                    </p>
+                    <p className="font-sans text-xl font-normal tracking-[0.08em] text-ink">
+                      {rydgesSpecialRate.code}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="font-sans text-[10px] tracking-extreme uppercase text-gold mb-2">
+                      Phone bookings
+                    </p>
+                    <p className="font-sans text-lg font-normal tracking-[0.03em] text-ink">
+                      {rydgesSpecialRate.phone}
+                    </p>
+                  </div>
+                </div>
+
+                <ol className="space-y-3 font-sans font-light text-[14px] text-ink/65 leading-relaxed mb-8">
+                  <li>1. Visit the Rydges Resort Hunter Valley booking website.</li>
+                  <li>2. Enter your stay dates and the number of guests staying.</li>
+                  <li>3. Click “I have a code”, enter the Block ID, then click “Go”.</li>
+                </ol>
+
+                <p className="font-sans text-[12px] text-ink/50 leading-relaxed mb-8">
+                  Bookings are subject to hotel availability and no rooms are being held.
+                  Guests can also call and quote {rydgesSpecialRate.bookingName}.
+                </p>
+
+                <a
+                  href={rydgesSpecialRate.link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-block font-sans text-[10px] tracking-extreme uppercase border border-gold/40 text-gold px-6 py-3 hover:bg-gold hover:text-white transition-all duration-300"
+                >
+                  Book Rydges →
+                </a>
+              </div>
+            </div>
           </motion.div>
 
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-16">
