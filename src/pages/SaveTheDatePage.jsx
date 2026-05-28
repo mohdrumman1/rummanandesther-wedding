@@ -31,7 +31,7 @@ function CountdownUnit({ value, label }) {
         initial={{ opacity: 0.4, y: -4 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.15 }}
-        className="font-serif text-6xl sm:text-8xl md:text-9xl font-light text-white tabular-nums leading-none"
+        className="font-serif text-4xl sm:text-8xl md:text-9xl font-light text-white tabular-nums leading-none"
       >
         {String(value).padStart(2, '0')}
       </motion.div>
@@ -74,13 +74,13 @@ export default function SaveTheDatePage() {
             Counting down to the big day
           </p>
 
-          <div className="flex items-start justify-center gap-6 sm:gap-10 md:gap-16 mb-16">
+          <div className="flex items-start justify-center gap-2 sm:gap-10 md:gap-16 mb-16">
             <CountdownUnit value={timeLeft.days} label="Days" />
-            <div className="font-serif text-5xl sm:text-7xl text-white/20 mt-4">·</div>
+            <div className="font-serif text-3xl sm:text-7xl text-white/20 mt-2 sm:mt-4">·</div>
             <CountdownUnit value={timeLeft.hours} label="Hours" />
-            <div className="font-serif text-5xl sm:text-7xl text-white/20 mt-4">·</div>
+            <div className="font-serif text-3xl sm:text-7xl text-white/20 mt-2 sm:mt-4">·</div>
             <CountdownUnit value={timeLeft.minutes} label="Minutes" />
-            <div className="font-serif text-5xl sm:text-7xl text-white/20 mt-4">·</div>
+            <div className="font-serif text-3xl sm:text-7xl text-white/20 mt-2 sm:mt-4">·</div>
             <CountdownUnit value={timeLeft.seconds} label="Seconds" />
           </div>
 
