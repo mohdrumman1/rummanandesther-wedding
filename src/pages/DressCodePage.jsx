@@ -1,4 +1,5 @@
-import { motion } from 'framer-motion'
+import { useState, useEffect } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import PageHeader from '../components/PageHeader'
 
 const pageVariants = {
@@ -34,8 +35,67 @@ const sangeetPalette = [
   { color: '#8A9BB5', label: 'Steel' },
 ]
 
-export default function DressCodePage() {
+function Lightbox({ src, alt, onClose }) {
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === 'Escape') onClose() }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [onClose])
+
   return (
+    <AnimatePresence>
+      <motion.div
+        className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        onClick={onClose}
+      >
+        <button
+          onClick={onClose}
+          className="absolute top-5 right-5 text-white/70 hover:text-white text-3xl leading-none"
+          aria-label="Close"
+        >
+          ×
+        </button>
+        <motion.img
+          src={src}
+          alt={alt}
+          className="max-w-full max-h-[90vh] object-contain shadow-2xl"
+          initial={{ scale: 0.92, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ duration: 0.2 }}
+          onClick={(e) => e.stopPropagation()}
+        />
+      </motion.div>
+    </AnimatePresence>
+  )
+}
+
+function ClickableImage({ src, alt, className, onOpen }) {
+  return (
+    <button
+      type="button"
+      className="relative w-full h-full block group focus:outline-none"
+      onClick={() => onOpen(src, alt)}
+      aria-label={`View full image: ${alt}`}
+    >
+      <img src={src} alt={alt} className={className} />
+      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/25 transition-colors duration-300 flex items-center justify-center">
+        <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 text-white text-3xl drop-shadow-lg">⊕</span>
+      </div>
+    </button>
+  )
+}
+
+export default function DressCodePage() {
+  const [lightbox, setLightbox] = useState(null)
+  const openLightbox = (src, alt) => setLightbox({ src, alt })
+  const closeLightbox = () => setLightbox(null)
+
+  return (
+    <>
+    {lightbox && <Lightbox src={lightbox.src} alt={lightbox.alt} onClose={closeLightbox} />}
     <motion.div variants={pageVariants} initial="initial" animate="animate" exit="exit">
       <PageHeader title="Dress Code" subtitle="Two events, two looks. Let's make it memorable." />
 
@@ -62,10 +122,11 @@ export default function DressCodePage() {
               <div className="grid md:grid-cols-2">
                 {/* Collage image */}
                 <div className="aspect-[4/3] md:aspect-auto overflow-hidden bg-stone-900">
-                  <img
+                  <ClickableImage
                     src="/images/sangeet-collage.jpeg"
                     alt="Sangeet dress inspiration"
                     className="w-full h-full object-cover"
+                    onOpen={openLightbox}
                   />
                 </div>
 
@@ -126,10 +187,11 @@ export default function DressCodePage() {
             <div className="overflow-hidden mb-4">
               <div className="grid md:grid-cols-2">
                 <div className="aspect-[4/3] md:aspect-auto overflow-hidden bg-stone-900">
-                  <img
+                  <ClickableImage
                     src="/images/women-collage.png"
                     alt="Women's dress inspiration"
                     className="w-full h-full object-cover"
+                    onOpen={openLightbox}
                   />
                 </div>
                 <div className="p-6 md:p-10 bg-[#D6E8F5] flex flex-col justify-center">
@@ -173,10 +235,11 @@ export default function DressCodePage() {
             <div className="overflow-hidden">
               <div className="grid md:grid-cols-2">
                 <div className="aspect-[4/3] md:aspect-auto overflow-hidden bg-stone-900">
-                  <img
+                  <ClickableImage
                     src="/images/men-collage.png"
                     alt="Men's dress inspiration"
                     className="w-full h-full object-cover"
+                    onOpen={openLightbox}
                   />
                 </div>
                 <div className="p-6 md:p-10 bg-[#FAF6F0] flex flex-col justify-center">
@@ -242,5 +305,6 @@ export default function DressCodePage() {
         </div>
       </section>
     </motion.div>
+    </>
   )
 }
