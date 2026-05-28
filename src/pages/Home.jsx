@@ -29,7 +29,7 @@ export default function Home() {
           style={{ y: heroY, scale: heroScale }}
         >
           <div
-            className="w-full h-full bg-cover bg-no-repeat bg-[75%_center] sm:bg-center"
+            className="w-full h-full bg-cover bg-no-repeat bg-[60%_center] sm:bg-center"
             style={{
               backgroundImage: `url('/images/hero.jpg'), linear-gradient(160deg, #4A1E24 0%, #722F37 40%, #9E7B3C 75%, #FAF6F0 100%)`,
             }}
