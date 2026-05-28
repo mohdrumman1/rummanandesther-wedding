@@ -2,7 +2,7 @@ import { motion } from 'framer-motion'
 
 export default function PageHeader({ title, subtitle, dark = false }) {
   return (
-    <div className={`pt-36 pb-16 px-6 text-center ${dark ? 'bg-ink text-white' : 'bg-cream text-ink border-b border-gold/15'}`}>
+    <div className={`pt-28 sm:pt-36 pb-16 px-6 text-center ${dark ? 'bg-ink text-white' : 'bg-cream text-ink border-b border-gold/15'}`}>
       <motion.div
         initial={{ opacity: 0, y: 24 }}
         animate={{ opacity: 1, y: 0 }}

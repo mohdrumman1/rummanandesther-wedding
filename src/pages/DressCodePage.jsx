@@ -54,7 +54,7 @@ export default function DressCodePage() {
               <span className="h-px w-8 bg-gold flex-shrink-0" />
               <span className="font-serif text-2xl md:text-3xl font-light text-ink">
                 The Sangeet
-                <span className="font-sans text-[13px] tracking-wide text-gold ml-3 align-middle">· Friday, December 11</span>
+                <span className="font-sans text-[13px] tracking-wide text-gold block sm:inline sm:ml-3 mt-1 sm:mt-0">· Friday, December 11</span>
               </span>
             </div>
 
@@ -70,7 +70,7 @@ export default function DressCodePage() {
                 </div>
 
                 {/* Guidance */}
-                <div className="p-10 bg-[#0D1B2A] text-white flex flex-col justify-center">
+                <div className="p-6 md:p-10 bg-[#0D1B2A] text-white flex flex-col justify-center">
                   <span className="text-gold/50 text-3xl block mb-5">◇</span>
                   <p className="font-sans text-[10px] tracking-extreme uppercase text-gold/70 mb-2">Dress code</p>
                   <h2 className="font-serif text-3xl font-light text-white mb-1">Indian Attire</h2>
@@ -118,7 +118,7 @@ export default function DressCodePage() {
               <span className="h-px w-8 bg-gold flex-shrink-0" />
               <span className="font-serif text-2xl md:text-3xl font-light text-ink">
                 The Wedding &amp; Reception
-                <span className="font-sans text-[13px] tracking-wide text-gold ml-3 align-middle">· Saturday, December 12</span>
+                <span className="font-sans text-[13px] tracking-wide text-gold block sm:inline sm:ml-3 mt-1 sm:mt-0">· Saturday, December 12</span>
               </span>
             </div>
 
@@ -132,7 +132,7 @@ export default function DressCodePage() {
                     className="w-full h-full object-cover"
                   />
                 </div>
-                <div className="p-10 bg-[#D6E8F5] flex flex-col justify-center">
+                <div className="p-6 md:p-10 bg-[#D6E8F5] flex flex-col justify-center">
                   <span className="text-gold text-3xl block mb-5">◇</span>
                   <p className="font-sans text-[10px] tracking-extreme uppercase text-gold mb-2">For</p>
                   <h2 className="font-serif text-3xl font-light text-ink mb-1">Women</h2>
@@ -179,7 +179,7 @@ export default function DressCodePage() {
                     className="w-full h-full object-cover"
                   />
                 </div>
-                <div className="p-10 bg-[#FAF6F0] flex flex-col justify-center">
+                <div className="p-6 md:p-10 bg-[#FAF6F0] flex flex-col justify-center">
                   <span className="text-gold text-3xl block mb-5">◇</span>
                   <p className="font-sans text-[10px] tracking-extreme uppercase text-gold mb-2">For</p>
                   <h2 className="font-serif text-3xl font-light text-ink mb-1">Men</h2>

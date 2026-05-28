@@ -29,7 +29,7 @@ export default function Home() {
           style={{ y: heroY, scale: heroScale }}
         >
           <div
-            className="w-full h-full bg-cover bg-no-repeat bg-[70%_center] sm:bg-center"
+            className="w-full h-full bg-cover bg-no-repeat bg-[80%_center] sm:bg-center"
             style={{
               backgroundImage: `url('/images/hero.jpg'), linear-gradient(160deg, #4A1E24 0%, #722F37 40%, #9E7B3C 75%, #FAF6F0 100%)`,
             }}
@@ -119,7 +119,7 @@ export default function Home() {
       </section>
 
       {/* ─── WELCOME ─── */}
-      <section className="py-28 px-6 bg-cream">
+      <section className="py-28 px-6 bg-cream overflow-hidden">
         <div className="max-w-5xl mx-auto grid md:grid-cols-2 gap-16 lg:gap-24 items-center">
 
           {/* Photo */}
@@ -205,7 +205,7 @@ export default function Home() {
             <span className="h-px w-16 bg-gold/40" />
           </div>
 
-          <h2 className="font-serif text-6xl md:text-8xl lg:text-9xl font-light tracking-widest mb-5 text-white">
+          <h2 className="font-serif text-5xl sm:text-6xl md:text-8xl lg:text-9xl font-light tracking-widest mb-5 text-white">
             12.12.2026
           </h2>
 
@@ -253,7 +253,7 @@ export default function Home() {
               viewport={{ once: true, margin: '-60px' }}
               transition={{ duration: 0.6, delay: i * 0.15 }}
               whileHover={{ y: -4, transition: { duration: 0.25 } }}
-              className="border border-gold/30 bg-white p-10 text-center"
+              className="border border-gold/30 bg-white p-6 sm:p-10 text-center"
             >
               <span className="text-gold/50 text-2xl block mb-5">{event.icon}</span>
               <h3 className="font-serif text-2xl font-light text-ink mb-4">{event.title}</h3>
