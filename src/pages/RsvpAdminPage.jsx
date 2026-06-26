@@ -97,7 +97,7 @@ function LoginPanel({ onLogin }) {
                 onChange={event => setUsername(event.target.value)}
                 className={`${inputClass} border-gold/30 bg-cream/35 focus:bg-white`}
                 autoComplete="username"
-                placeholder="Leave blank for owner admin"
+                placeholder="admin"
               />
             </div>
             <div>

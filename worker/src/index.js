@@ -151,7 +151,7 @@ function inviteAdminHtml(request, env) {
   </header>
   <main>
     <form id="loginForm">
-      <label>Username <input id="username" autocomplete="username" placeholder="Leave blank for owner admin"></label>
+      <label>Username <input id="username" autocomplete="username" placeholder="admin"></label>
       <label>Password <input id="password" type="password" autocomplete="current-password" required></label>
       <button class="primary" type="submit">Open Invite List</button>
       <p id="loginError" class="error"></p>
@@ -476,7 +476,8 @@ async function listGroups(env) {
 async function handleAdminLogin(request, env) {
   const body = await readJson(request);
   if (!body?.password) return json({ error: 'Password is required.' }, 400);
-  if (body.username) {
+  const requestedUsername = normalizeName(body.username).toLowerCase();
+  if (requestedUsername && requestedUsername !== 'admin') {
     const user = await validateNamedUser(body.username, body.password, env);
     if (!user) {
       await sleep(400);
