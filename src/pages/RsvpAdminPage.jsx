@@ -62,47 +62,77 @@ function LoginPanel({ onLogin }) {
   }
 
   return (
-    <section className="py-24 px-6 bg-cream">
-      <form onSubmit={submit} className="max-w-md mx-auto border border-gold/25 bg-white p-8 space-y-6">
-        <div className="text-center">
-          <span className="text-gold text-4xl block mb-5">◆</span>
-          <h2 className="font-serif text-4xl font-light text-ink">RSVP Admin</h2>
-          <p className="mt-3 font-sans text-[13px] text-ink/50 font-light">
-            Enter your admin details to view guest RSVPs.
+    <section className="relative min-h-[calc(100vh-160px)] overflow-hidden bg-cream px-6 py-16 md:py-24">
+      <div
+        className="absolute inset-0 bg-[url('/images/welcome.jpg')] bg-cover bg-center opacity-[0.14]"
+        aria-hidden="true"
+      />
+      <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(250,246,240,0.92),rgba(250,246,240,0.98))]" aria-hidden="true" />
+      <div className="relative mx-auto grid max-w-5xl items-center gap-10 md:grid-cols-[1fr_440px]">
+        <div className="hidden md:block">
+          <p className="font-sans text-[10px] uppercase tracking-extreme text-gold-dark">Private dashboard</p>
+          <h1 className="mt-5 max-w-xl font-serif text-6xl font-light leading-[0.95] text-ink">
+            Rumman & Esther
+          </h1>
+          <div className="mt-8 h-px w-32 bg-gold/50" />
+          <p className="mt-6 max-w-md font-sans text-[15px] font-light leading-7 text-ink/55">
+            RSVPs, invite links, household notes, and family responses.
           </p>
         </div>
-        <div>
-          <label htmlFor="adminUsername" className={labelClass}>Username</label>
-          <input
-            id="adminUsername"
-            type="text"
-            value={username}
-            onChange={event => setUsername(event.target.value)}
-            className={inputClass}
-            autoComplete="username"
-            placeholder="Leave blank for owner admin"
-          />
-        </div>
-        <div>
-          <label htmlFor="adminPassword" className={labelClass}>Password</label>
-          <input
-            id="adminPassword"
-            type="password"
-            value={password}
-            onChange={event => setPassword(event.target.value)}
-            className={inputClass}
-            autoComplete="current-password"
-          />
-        </div>
-        {error && <p className="font-sans text-[13px] text-burgundy text-center">{error}</p>}
-        <button
-          type="submit"
-          disabled={loading || !password}
-          className="w-full font-sans text-[10px] tracking-extreme uppercase bg-burgundy text-white py-4 hover:bg-burgundy-dark disabled:opacity-50"
-        >
-          {loading ? 'Opening...' : 'Open Dashboard'}
-        </button>
-      </form>
+
+        <form onSubmit={submit} className="border border-gold/25 bg-white/95 p-7 shadow-[0_24px_80px_rgba(42,31,26,0.10)] backdrop-blur md:p-9">
+          <div className="text-center">
+            <span className="mx-auto mb-5 flex h-12 w-12 items-center justify-center border border-gold/35 text-gold">◆</span>
+            <p className="font-sans text-[10px] uppercase tracking-extreme text-ink/35">RSVP Admin</p>
+            <h2 className="mt-3 font-serif text-4xl font-light text-ink">Welcome Back</h2>
+          </div>
+
+          <div className="mt-8 space-y-5">
+            <div>
+              <label htmlFor="adminUsername" className={labelClass}>Username</label>
+              <input
+                id="adminUsername"
+                type="text"
+                value={username}
+                onChange={event => setUsername(event.target.value)}
+                className={`${inputClass} border-gold/30 bg-cream/35 focus:bg-white`}
+                autoComplete="username"
+                placeholder="Leave blank for owner admin"
+              />
+            </div>
+            <div>
+              <label htmlFor="adminPassword" className={labelClass}>Password</label>
+              <input
+                id="adminPassword"
+                type="password"
+                value={password}
+                onChange={event => setPassword(event.target.value)}
+                className={`${inputClass} border-gold/30 bg-cream/35 focus:bg-white`}
+                autoComplete="current-password"
+              />
+            </div>
+          </div>
+
+          {error && (
+            <div className="mt-5 border border-burgundy/20 bg-burgundy/5 px-4 py-3 text-center font-sans text-[13px] text-burgundy">
+              {error}
+            </div>
+          )}
+
+          <button
+            type="submit"
+            disabled={loading || !password}
+            className="mt-6 w-full bg-burgundy py-4 font-sans text-[10px] uppercase tracking-extreme text-white transition-colors duration-200 hover:bg-burgundy-dark disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {loading ? 'Opening...' : 'Open Dashboard'}
+          </button>
+
+          <div className="mt-6 flex items-center justify-center gap-3 border-t border-gold/20 pt-5 font-sans text-[11px] uppercase tracking-ultra text-ink/35">
+            <span className="h-1.5 w-1.5 bg-gold" />
+            Secure invite access
+          </div>
+        </form>
+      </div>
     </section>
   )
 }
