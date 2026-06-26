@@ -14,6 +14,7 @@ export function responseText(value) {
 }
 
 export function groupStatus(group) {
+  if (group.summary?.status) return group.summary.status
   const guests = group.guests || []
   if (!guests.length) return 'empty'
   const allAnswered = guests.every(guest =>
@@ -42,6 +43,14 @@ export function rsvpCounts(groups) {
     const status = groupStatus(group)
     if (status === 'complete') counts.completeHouseholds += 1
     if (status === 'pending' || status === 'partial') counts.pendingHouseholds += 1
+    if (group.summary) {
+      counts.sangeetYes += Number(group.summary.sangeetYes || 0)
+      counts.ceremonyYes += Number(group.summary.ceremonyYes || 0)
+      counts.sangeetNo += Number(group.summary.sangeetNo || 0)
+      counts.ceremonyNo += Number(group.summary.ceremonyNo || 0)
+      counts.children += Number(group.summary.children || 0)
+      return counts
+    }
     group.guests.forEach(guest => {
       if (guest.sangeetAttending === true) counts.sangeetYes += 1
       if (guest.ceremonyAttending === true) counts.ceremonyYes += 1

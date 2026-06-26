@@ -1,4 +1,5 @@
 const JSON_HEADERS = { 'content-type': 'application/json; charset=utf-8' };
+const NO_STORE_HEADERS = { 'cache-control': 'no-store' };
 const RSVP_DEADLINE = '2026-08-15';
 
 function json(data, status = 200, extraHeaders = {}) {
@@ -152,6 +153,24 @@ function submittedRsvpGroup(group) {
       message: group.rsvp.message,
       submittedAt: group.rsvp.submittedAt,
     },
+  };
+}
+
+function groupSummary(group) {
+  const guests = group.guests || [];
+  const allAnswered = guests.length > 0 && guests.every(guest =>
+    guest.sangeetAttending !== null && guest.ceremonyAttending !== null
+  );
+  const someAnswered = guests.some(guest =>
+    guest.sangeetAttending !== null || guest.ceremonyAttending !== null
+  );
+  return {
+    status: !guests.length ? 'empty' : allAnswered ? 'complete' : someAnswered ? 'partial' : 'pending',
+    sangeetYes: guests.filter(guest => guest.sangeetAttending === true).length,
+    ceremonyYes: guests.filter(guest => guest.ceremonyAttending === true).length,
+    sangeetNo: guests.filter(guest => guest.sangeetAttending === false).length,
+    ceremonyNo: guests.filter(guest => guest.ceremonyAttending === false).length,
+    children: guests.reduce((total, guest) => total + Number(guest.childrenCount || 0), 0),
   };
 }
 
@@ -553,6 +572,7 @@ function readOnlyGroup(group) {
     id: group.accessCode,
     householdName: group.householdName,
     accessCode: group.accessCode,
+    summary: groupSummary(group),
     guests: group.guests.filter(guest => !guest.isAdditional).map(guest => ({
       name: guest.name,
       sangeetAttending: null,
@@ -564,8 +584,8 @@ function readOnlyGroup(group) {
 
 async function handleAdminGroupsGet(env, session) {
   const groups = await listGroups(env);
-  if (session.role === 'readonly') return json({ groups: groups.map(readOnlyGroup) });
-  return json({ groups });
+  if (session.role === 'readonly') return json({ groups: groups.map(readOnlyGroup) }, 200, NO_STORE_HEADERS);
+  return json({ groups }, 200, NO_STORE_HEADERS);
 }
 
 async function handleAdminGroupCreate(request, env) {

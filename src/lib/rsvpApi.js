@@ -82,7 +82,10 @@ export async function adminLogin({ username, password }) {
 }
 
 export async function fetchAdminGroups() {
-  return request('/api/admin/groups', { headers: adminHeaders() })
+  return request(`/api/admin/groups?t=${Date.now()}`, {
+    cache: 'no-store',
+    headers: adminHeaders(),
+  })
 }
 
 export async function createAdminGroup(payload) {

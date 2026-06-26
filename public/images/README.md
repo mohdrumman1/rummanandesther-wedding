@@ -4,7 +4,7 @@ Add your photos here before deploying:
 
 | Filename | Used in | Description |
 |---|---|---|
-| `hero.jpg` | Homepage hero | Full coastal shot — Rumman in white sherwani, Esther in red/gold bridal outfit |
+| `hero.jpg` | Homepage hero | Full coastal shot - Rumman in white sherwani, Esther in red/gold bridal outfit |
 | `welcome.jpg` | Homepage welcome section | Black & white portrait of Esther (or couple) |
 
 ## Notes

@@ -396,8 +396,8 @@ function GroupTable({ groups, filter, onEdit, onDelete, readOnly }) {
           <tbody>
             {filtered.map(group => {
               const status = groupStatus(group)
-              const sangeetYes = group.guests.filter(guest => guest.sangeetAttending === true).length
-              const ceremonyYes = group.guests.filter(guest => guest.ceremonyAttending === true).length
+              const sangeetYes = group.summary?.sangeetYes ?? group.guests.filter(guest => guest.sangeetAttending === true).length
+              const ceremonyYes = group.summary?.ceremonyYes ?? group.guests.filter(guest => guest.ceremonyAttending === true).length
               const inviteLink = buildInviteLink(group.accessCode)
               return (
                 <tr key={group.id} className="border-b border-gold/10 align-top">
@@ -561,6 +561,14 @@ export default function RsvpAdminPage() {
               ))}
             </div>
             <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={loadGroups}
+                disabled={loading}
+                className="font-sans text-[10px] tracking-extreme uppercase border border-gold/40 px-5 py-4 text-ink hover:border-gold disabled:opacity-40"
+              >
+                {loading ? 'Refreshing...' : 'Refresh'}
+              </button>
               {!readOnly && (
                 <button
                   type="button"
