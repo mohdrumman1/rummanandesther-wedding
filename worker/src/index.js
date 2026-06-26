@@ -702,7 +702,7 @@ async function route(request, env) {
   const parts = url.pathname.split('/').filter(Boolean);
 
   if (method === 'OPTIONS') return new Response(null, { status: 204 });
-  if (method === 'GET' && url.pathname === '/invite-admin') return inviteAdminHtml(request, env);
+  if (method === 'GET' && url.pathname === '/admin') return inviteAdminHtml(request, env);
   if (parts[0] !== 'api') return json({ error: 'Not found.' }, 404);
 
   if (parts[1] === 'health') return json({ ok: true });
