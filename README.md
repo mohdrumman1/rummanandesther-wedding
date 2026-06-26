@@ -65,6 +65,22 @@ npm run worker:dev
 
 Admin dashboard: `/admin`.
 
+Named admin users can be configured with the `ADMIN_USERS` secret. It should be a JSON array:
+
+```json
+[
+  {
+    "username": "suja",
+    "role": "readonly",
+    "passwordHash": "SHA_256_PASSWORD_HASH"
+  }
+]
+```
+
+Read-only users can view households, family members, RSVP status, and copy invite links/messages. They cannot create, edit, delete, import, or export invitees. RSVP links are bearer links: anyone with a copied invite link can submit that household's RSVP.
+
+Named users must use `passwordHash`; plaintext `password` entries are ignored. The username `admin` is reserved for the owner admin password flow.
+
 Guest RSVP links: `/rsvp/:accessCode`.
 
 CSV import columns: `household, guest, plus_one_limit, partner, children_allowed, max_children, notes`.

@@ -8,6 +8,13 @@ function json(data, status = 200, extraHeaders = {}) {
   });
 }
 
+function html(content, status = 200) {
+  return new Response(content, {
+    status,
+    headers: { 'content-type': 'text/html; charset=utf-8' },
+  });
+}
+
 function allowedOrigin(request, env) {
   const origin = request.headers.get('Origin');
   if (!origin) return '*';
@@ -100,10 +107,161 @@ function groupRow(row, guests = [], notes = null) {
   };
 }
 
+function inviteAdminHtml(request, env) {
+  const inviteBaseUrl = env.INVITE_BASE_URL || new URL(request.url).origin;
+  return html(`<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Wedding Invite List</title>
+  <style>
+    :root { color-scheme: light; --ink:#2f2926; --muted:#7b7068; --line:#d8c3a5; --cream:#faf7ef; --burgundy:#7b2434; }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: var(--cream); color: var(--ink); }
+    header { padding: 32px clamp(18px, 4vw, 48px); border-bottom: 1px solid var(--line); background: #fff; }
+    h1 { margin: 0; font-family: Georgia, serif; font-size: clamp(32px, 5vw, 56px); font-weight: 400; }
+    main { width: min(1180px, calc(100% - 32px)); margin: 28px auto 48px; }
+    form, .toolbar, table { background: #fff; border: 1px solid var(--line); }
+    form { display: grid; gap: 14px; max-width: 460px; padding: 22px; }
+    label { display: grid; gap: 6px; font-size: 11px; letter-spacing: .18em; text-transform: uppercase; color: var(--muted); }
+    input { width: 100%; border: 1px solid var(--line); padding: 12px; font: inherit; }
+    button { border: 1px solid var(--line); background: #fff; color: var(--ink); padding: 11px 14px; font-size: 11px; letter-spacing: .14em; text-transform: uppercase; cursor: pointer; }
+    button.primary { background: var(--burgundy); border-color: var(--burgundy); color: #fff; }
+    button:disabled { opacity: .55; cursor: not-allowed; }
+    .toolbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 16px; padding: 14px; }
+    .toolbar input { max-width: 360px; }
+    .meta { color: var(--muted); font-size: 13px; }
+    .error { color: var(--burgundy); }
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; min-width: 860px; border-collapse: collapse; }
+    th, td { padding: 14px; border-bottom: 1px solid #eadfce; text-align: left; vertical-align: top; }
+    th { color: var(--muted); font-size: 11px; letter-spacing: .18em; text-transform: uppercase; background: #fffaf0; }
+    td { font-size: 14px; line-height: 1.45; }
+    .household { font-family: Georgia, serif; font-size: 22px; }
+    .link { max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); }
+    .actions { display: flex; flex-wrap: wrap; gap: 8px; }
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Wedding Invite List</h1>
+    <p class="meta">Read-only household list, family members, and copy-ready RSVP links.</p>
+  </header>
+  <main>
+    <form id="loginForm">
+      <label>Username <input id="username" autocomplete="username" placeholder="Leave blank for owner admin"></label>
+      <label>Password <input id="password" type="password" autocomplete="current-password" required></label>
+      <button class="primary" type="submit">Open Invite List</button>
+      <p id="loginError" class="error"></p>
+    </form>
+    <section id="app" class="hidden">
+      <div class="toolbar">
+        <input id="search" placeholder="Search households or family members">
+        <div class="meta"><span id="count">0</span> households</div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Household</th><th>Family Members</th><th>Invite Link</th><th>Copy</th></tr>
+          </thead>
+          <tbody id="rows"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+  <script>
+    const inviteBaseUrl = ${JSON.stringify(inviteBaseUrl)};
+    let groups = [];
+    const tokenKey = 'invite_admin_token';
+    const loginForm = document.getElementById('loginForm');
+    const loginError = document.getElementById('loginError');
+    const usernameInput = document.getElementById('username');
+    const passwordInput = document.getElementById('password');
+    const app = document.getElementById('app');
+    const rows = document.getElementById('rows');
+    const search = document.getElementById('search');
+    const count = document.getElementById('count');
+
+    function inviteLink(group) {
+      return inviteBaseUrl + '/rsvp/' + encodeURIComponent(group.accessCode);
+    }
+
+    function inviteMessage(group) {
+      return 'Hi ' + group.householdName + ',\\n\\nWe\\'d love to invite you to our wedding. Please click the link below to RSVP:\\n\\n' + inviteLink(group) + '\\n\\nWith love,\\nRumman & Esther';
+    }
+
+    function render() {
+      const query = search.value.trim().toLowerCase();
+      const filtered = groups.filter(group => {
+        const guests = group.guests.map(guest => guest.name).join(' ');
+        return (group.householdName + ' ' + guests).toLowerCase().includes(query);
+      });
+      count.textContent = filtered.length;
+      rows.innerHTML = filtered.map((group, index) => {
+        const guests = group.guests.map(guest => guest.name).join(', ');
+        const link = inviteLink(group);
+        return '<tr><td><div class="household">' + escapeHtml(group.householdName) + '</div></td><td>' + escapeHtml(guests) + '</td><td><div class="link">' + escapeHtml(link) + '</div></td><td><div class="actions"><button data-copy-message="' + index + '">Copy Invite</button><button data-copy-link="' + index + '">Copy Link</button></div></td></tr>';
+      }).join('');
+      rows.querySelectorAll('[data-copy-message]').forEach(button => {
+        button.addEventListener('click', () => navigator.clipboard.writeText(inviteMessage(filtered[Number(button.dataset.copyMessage)])));
+      });
+      rows.querySelectorAll('[data-copy-link]').forEach(button => {
+        button.addEventListener('click', () => navigator.clipboard.writeText(inviteLink(filtered[Number(button.dataset.copyLink)])));
+      });
+    }
+
+    function escapeHtml(value) {
+      return String(value || '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[char]));
+    }
+
+    async function loadGroups(token) {
+      const res = await fetch('/api/admin/groups', { headers: { authorization: 'Bearer ' + token } });
+      if (!res.ok) throw new Error('Could not load invite list.');
+      groups = (await res.json()).groups || [];
+      loginForm.classList.add('hidden');
+      app.classList.remove('hidden');
+      render();
+    }
+
+    loginForm.addEventListener('submit', async event => {
+      event.preventDefault();
+      loginError.textContent = '';
+      const res = await fetch('/api/admin/login', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ username: usernameInput.value, password: passwordInput.value }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        loginError.textContent = data.error || 'Login failed.';
+        return;
+      }
+      sessionStorage.setItem(tokenKey, data.token);
+      await loadGroups(data.token);
+    });
+
+    search.addEventListener('input', render);
+    const existingToken = sessionStorage.getItem(tokenKey);
+    if (existingToken) loadGroups(existingToken).catch(() => sessionStorage.removeItem(tokenKey));
+  </script>
+</body>
+</html>`);
+}
+
 async function sha256Hex(value) {
   const bytes = new TextEncoder().encode(value);
   const digest = await crypto.subtle.digest('SHA-256', bytes);
   return Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, '0')).join('');
+}
+
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+async function namedUserSessionKey(username, role, passwordHash) {
+  return sha256Hex(`${String(username || '').toLowerCase()}:${role}:${passwordHash}`);
 }
 
 async function sign(value, secret) {
@@ -133,26 +291,74 @@ function base64UrlDecode(value) {
   return JSON.parse(new TextDecoder().decode(bytes));
 }
 
-async function createToken(env) {
-  const payload = { role: 'admin', exp: Math.floor(Date.now() / 1000) + 60 * 60 * 12 };
+async function createToken(env, user = { username: 'admin', role: 'admin' }) {
+  const payload = {
+    username: user.username,
+    role: user.role,
+    sessionKey: user.sessionKey || null,
+    exp: Math.floor(Date.now() / 1000) + 60 * 60 * 12,
+  };
   const encoded = base64UrlEncode(payload);
   const signature = await sign(encoded, env.SESSION_SECRET);
   return `${encoded}.${signature}`;
 }
 
-async function requireAdmin(request, env) {
+async function getSession(request, env) {
   const header = request.headers.get('Authorization') || '';
   const token = header.startsWith('Bearer ') ? header.slice(7) : '';
   const [encoded, signature] = token.split('.');
-  if (!encoded || !signature || !env.SESSION_SECRET) return false;
+  if (!encoded || !signature || !env.SESSION_SECRET) return null;
   const expected = await sign(encoded, env.SESSION_SECRET);
-  if (signature !== expected) return false;
+  if (signature !== expected) return null;
   try {
     const payload = base64UrlDecode(encoded);
-    return payload.role === 'admin' && payload.exp > Math.floor(Date.now() / 1000);
+    if (!['admin', 'readonly'].includes(payload.role)) return null;
+    if (payload.exp <= Math.floor(Date.now() / 1000)) return null;
+    if (!await namedSessionIsActive(payload, env)) return null;
+    return payload;
   } catch {
-    return false;
+    return null;
   }
+}
+
+function parseAdminUsers(env) {
+  try {
+    const parsed = JSON.parse(env.ADMIN_USERS || '[]');
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+async function namedSessionIsActive(payload, env) {
+  if (!payload.username || payload.username === 'admin') return payload.role === 'admin';
+  for (const user of parseAdminUsers(env)) {
+    const role = user.role === 'admin' ? 'admin' : 'readonly';
+    if (String(user.username || '').toLowerCase() !== String(payload.username || '').toLowerCase()) continue;
+    if (role !== payload.role || !user.passwordHash) continue;
+    return payload.sessionKey === await namedUserSessionKey(user.username, role, user.passwordHash);
+  }
+  return false;
+}
+
+async function validateNamedUser(username, password, env) {
+  const normalizedUsername = normalizeName(username).toLowerCase();
+  if (normalizedUsername === 'admin') return null;
+  if (!normalizedUsername || !password) return null;
+  const users = parseAdminUsers(env);
+  for (const user of users) {
+    if (String(user.username || '').toLowerCase() !== normalizedUsername) continue;
+    const valid = user.passwordHash && await sha256Hex(password) === user.passwordHash;
+    if (valid) {
+      const role = user.role === 'admin' ? 'admin' : 'readonly';
+      return {
+        username: user.username,
+        role,
+        sessionKey: await namedUserSessionKey(user.username, role, user.passwordHash),
+      };
+    }
+  }
+  return null;
 }
 
 async function fetchGroupByAccessCode(env, accessCode) {
@@ -270,14 +476,30 @@ async function listGroups(env) {
 async function handleAdminLogin(request, env) {
   const body = await readJson(request);
   if (!body?.password) return json({ error: 'Password is required.' }, 400);
+  if (body.username) {
+    const user = await validateNamedUser(body.username, body.password, env);
+    if (!user) {
+      await sleep(400);
+      return json({ error: 'Incorrect username or password.' }, 401);
+    }
+    if (!env.SESSION_SECRET) return json({ error: 'SESSION_SECRET is not configured.' }, 500);
+    return json({
+      token: await createToken(env, user),
+      user: { username: user.username, role: user.role },
+    });
+  }
   const configuredHash = env.ADMIN_PASSWORD_HASH;
   const configuredPassword = env.ADMIN_PASSWORD;
   const valid = configuredHash
     ? await sha256Hex(body.password) === configuredHash
     : configuredPassword && body.password === configuredPassword;
-  if (!valid) return json({ error: 'Incorrect password.' }, 401);
+  if (!valid) {
+    await sleep(400);
+    return json({ error: 'Incorrect password.' }, 401);
+  }
   if (!env.SESSION_SECRET) return json({ error: 'SESSION_SECRET is not configured.' }, 500);
-  return json({ token: await createToken(env) });
+  const user = { username: 'admin', role: 'admin' };
+  return json({ token: await createToken(env, user), user });
 }
 
 async function handleAdminGroupsGet(env) {
@@ -442,7 +664,9 @@ async function handleAdminImport(request, env) {
 }
 
 function csvEscape(value) {
-  const string = String(value ?? '');
+  let string = String(value ?? '');
+  const firstVisible = Array.from(string).find(char => char.charCodeAt(0) > 32);
+  if (firstVisible && '=+-@'.includes(firstVisible)) string = `'${string}`;
   return /[",\n\r]/.test(string) ? `"${string.replace(/"/g, '""')}"` : string;
 }
 
@@ -478,6 +702,7 @@ async function route(request, env) {
   const parts = url.pathname.split('/').filter(Boolean);
 
   if (method === 'OPTIONS') return new Response(null, { status: 204 });
+  if (method === 'GET' && url.pathname === '/invite-admin') return inviteAdminHtml(request, env);
   if (parts[0] !== 'api') return json({ error: 'Not found.' }, 404);
 
   if (parts[1] === 'health') return json({ ok: true });
@@ -490,13 +715,15 @@ async function route(request, env) {
   if (parts[1] === 'admin' && parts[2] === 'login' && method === 'POST') return handleAdminLogin(request, env);
 
   if (parts[1] === 'admin') {
-    if (!await requireAdmin(request, env)) return json({ error: 'Admin login required.' }, 401);
+    const session = await getSession(request, env);
+    if (!session) return json({ error: 'Admin login required.' }, 401);
     if (parts[2] === 'groups' && method === 'GET') return handleAdminGroupsGet(env);
+    if (session.role !== 'admin') return json({ error: 'Read-only access cannot change invitees.' }, 403);
+    if (parts[2] === 'export' && method === 'GET') return handleAdminExport(env);
     if (parts[2] === 'groups' && method === 'POST') return handleAdminGroupCreate(request, env);
     if (parts[2] === 'groups' && parts[3] && method === 'PATCH') return handleAdminGroupPatch(request, env, parts[3]);
     if (parts[2] === 'groups' && parts[3] && method === 'DELETE') return handleAdminGroupDelete(env, parts[3]);
     if (parts[2] === 'import' && method === 'POST') return handleAdminImport(request, env);
-    if (parts[2] === 'export' && method === 'GET') return handleAdminExport(env);
   }
 
   return json({ error: 'Not found.' }, 404);

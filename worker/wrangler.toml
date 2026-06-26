@@ -9,3 +9,4 @@ database_id = "4eb3f2c5-8659-4c74-8958-6000734bed01"
 
 [vars]
 ALLOWED_ORIGINS = "http://localhost:5173,http://127.0.0.1:5173,https://rummanandesther.com,https://main--rummanandesther.netlify.app"
+INVITE_BASE_URL = "https://rummanandesther.com"

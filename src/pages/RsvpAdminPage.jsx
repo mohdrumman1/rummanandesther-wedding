@@ -9,6 +9,7 @@ import {
   deleteAdminGroup,
   exportAdminCsv,
   fetchAdminGroups,
+  getAdminUser,
   getAdminToken,
   importAdminCsv,
   updateAdminGroup,
@@ -41,6 +42,7 @@ function statusClass(status) {
 }
 
 function LoginPanel({ onLogin }) {
+  const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -50,7 +52,7 @@ function LoginPanel({ onLogin }) {
     setError('')
     setLoading(true)
     try {
-      await adminLogin(password)
+      await adminLogin({ username: username.trim(), password })
       onLogin()
     } catch (err) {
       setError(err.message)
@@ -66,11 +68,23 @@ function LoginPanel({ onLogin }) {
           <span className="text-gold text-4xl block mb-5">◆</span>
           <h2 className="font-serif text-4xl font-light text-ink">RSVP Admin</h2>
           <p className="mt-3 font-sans text-[13px] text-ink/50 font-light">
-            Enter the admin password to manage guest RSVPs.
+            Enter your admin details to view guest RSVPs.
           </p>
         </div>
         <div>
-          <label htmlFor="adminPassword" className={labelClass}>Admin password</label>
+          <label htmlFor="adminUsername" className={labelClass}>Username</label>
+          <input
+            id="adminUsername"
+            type="text"
+            value={username}
+            onChange={event => setUsername(event.target.value)}
+            className={inputClass}
+            autoComplete="username"
+            placeholder="Leave blank for owner admin"
+          />
+        </div>
+        <div>
+          <label htmlFor="adminPassword" className={labelClass}>Password</label>
           <input
             id="adminPassword"
             type="password"
@@ -327,8 +341,14 @@ function CsvImport({ onImported }) {
   )
 }
 
-function GroupTable({ groups, filter, onEdit, onDelete }) {
+function copyInviteMessage(group, inviteLink) {
+  return `Hi ${group.householdName},\n\nWe'd love to invite you to our wedding. Please click the link below to RSVP:\n\n${inviteLink}\n\nWith love,\nRumman & Esther`
+}
+
+function GroupTable({ groups, filter, onEdit, onDelete, readOnly }) {
   const filtered = groups.filter(group => filter === 'all' || groupStatus(group) === filter)
+  const headings = ['Household', 'Status', 'Family Members', 'Sangeet', 'Ceremony', 'Invite Link']
+  if (!readOnly) headings.push('Actions')
 
   return (
     <div className="border border-gold/25 bg-white overflow-hidden">
@@ -336,7 +356,7 @@ function GroupTable({ groups, filter, onEdit, onDelete }) {
         <table className="w-full min-w-[900px] text-left">
           <thead className="bg-cream border-b border-gold/20">
             <tr>
-              {['Household', 'Status', 'Guests', 'Sangeet', 'Ceremony', 'Invite Link', 'Actions'].map(label => (
+              {headings.map(label => (
                 <th key={label} className="px-4 py-4 font-sans text-[10px] tracking-extreme uppercase text-ink/45">
                   {label}
                 </th>
@@ -361,7 +381,10 @@ function GroupTable({ groups, filter, onEdit, onDelete }) {
                     </span>
                   </td>
                   <td className="px-4 py-5 font-sans text-[13px] text-ink/60">
-                    {group.guests.length}
+                    <p>{group.guests.length} guest{group.guests.length === 1 ? '' : 's'}</p>
+                    <p className="mt-2 max-w-[220px] text-ink/45">
+                      {group.guests.map(guest => guest.name).join(', ')}
+                    </p>
                   </td>
                   <td className="px-4 py-5 font-sans text-[13px] text-ink/60">
                     {sangeetYes} yes
@@ -370,25 +393,36 @@ function GroupTable({ groups, filter, onEdit, onDelete }) {
                     {ceremonyYes} yes
                   </td>
                   <td className="px-4 py-5">
-                    <button
-                      type="button"
-                      onClick={() => navigator.clipboard.writeText(`Hi ${group.householdName},\n\nWe'd love to invite you to our wedding. Please click the link below to RSVP:\n\n${inviteLink}\n\nWith love,\nRumman & Esther`)}
-                      className="font-sans text-[10px] tracking-ultra uppercase text-burgundy"
-                    >
-                      Copy Invite
-                    </button>
-                    <p className="mt-2 max-w-[260px] truncate font-sans text-[12px] text-ink/40">{inviteLink}</p>
-                  </td>
-                  <td className="px-4 py-5">
-                    <div className="flex gap-4">
-                      <button type="button" onClick={() => onEdit(group)} className="font-sans text-[10px] tracking-ultra uppercase text-ink">
-                        Edit
+                    <div className="flex flex-wrap gap-3">
+                      <button
+                        type="button"
+                        onClick={() => navigator.clipboard.writeText(copyInviteMessage(group, inviteLink))}
+                        className="font-sans text-[10px] tracking-ultra uppercase text-burgundy"
+                      >
+                        Copy Invite
                       </button>
-                      <button type="button" onClick={() => onDelete(group)} className="font-sans text-[10px] tracking-ultra uppercase text-burgundy">
-                        Delete
+                      <button
+                        type="button"
+                        onClick={() => navigator.clipboard.writeText(inviteLink)}
+                        className="font-sans text-[10px] tracking-ultra uppercase text-ink/60"
+                      >
+                        Copy Link
                       </button>
                     </div>
+                    <p className="mt-2 max-w-[260px] truncate font-sans text-[12px] text-ink/40">{inviteLink}</p>
                   </td>
+                  {!readOnly && (
+                    <td className="px-4 py-5">
+                      <div className="flex gap-4">
+                        <button type="button" onClick={() => onEdit(group)} className="font-sans text-[10px] tracking-ultra uppercase text-ink">
+                          Edit
+                        </button>
+                        <button type="button" onClick={() => onDelete(group)} className="font-sans text-[10px] tracking-ultra uppercase text-burgundy">
+                          Delete
+                        </button>
+                      </div>
+                    </td>
+                  )}
                 </tr>
               )
             })}
@@ -406,6 +440,7 @@ function GroupTable({ groups, filter, onEdit, onDelete }) {
 
 export default function RsvpAdminPage() {
   const [authenticated, setAuthenticated] = useState(Boolean(getAdminToken()))
+  const [user, setUser] = useState(getAdminUser())
   const [groups, setGroups] = useState([])
   const [activeGroup, setActiveGroup] = useState(null)
   const [filter, setFilter] = useState('all')
@@ -413,6 +448,7 @@ export default function RsvpAdminPage() {
   const [error, setError] = useState('')
 
   const counts = useMemo(() => rsvpCounts(groups), [groups])
+  const readOnly = user?.role === 'readonly'
 
   async function loadGroups() {
     if (!getAdminToken()) return
@@ -421,6 +457,7 @@ export default function RsvpAdminPage() {
     try {
       const data = await fetchAdminGroups()
       setGroups(data.groups || [])
+      setUser(getAdminUser())
       setAuthenticated(true)
     } catch (err) {
       setError(err.message)
@@ -462,10 +499,16 @@ export default function RsvpAdminPage() {
   function logout() {
     clearAdminToken()
     setAuthenticated(false)
+    setUser(null)
     setGroups([])
   }
 
-  if (!authenticated) return <LoginPanel onLogin={() => setAuthenticated(true)} />
+  if (!authenticated) {
+    return <LoginPanel onLogin={() => {
+      setUser(getAdminUser())
+      setAuthenticated(true)
+    }} />
+  }
 
   return (
     <motion.div variants={pageVariants} initial="initial" animate="animate" exit="exit">
@@ -488,13 +531,20 @@ export default function RsvpAdminPage() {
               ))}
             </div>
             <div className="flex gap-3">
-              <button
-                type="button"
-                onClick={downloadExport}
-                className="font-sans text-[10px] tracking-extreme uppercase border border-gold/40 px-5 py-4 text-ink hover:border-gold"
-              >
-                Export CSV
-              </button>
+              {!readOnly && (
+                <button
+                  type="button"
+                  onClick={downloadExport}
+                  className="font-sans text-[10px] tracking-extreme uppercase border border-gold/40 px-5 py-4 text-ink hover:border-gold"
+                >
+                  Export CSV
+                </button>
+              )}
+              {readOnly && (
+                <span className="font-sans text-[10px] tracking-extreme uppercase border border-gold/30 px-5 py-4 text-ink/45">
+                  Read Only
+                </span>
+              )}
               <button
                 type="button"
                 onClick={logout}
@@ -511,19 +561,21 @@ export default function RsvpAdminPage() {
             </div>
           )}
 
-          <div className="grid gap-8 lg:grid-cols-[420px_1fr]">
-            <div className="space-y-8">
-              <GroupForm
-                key={activeGroup?.id || 'new-household'}
-                activeGroup={activeGroup}
-                onSave={() => {
-                  setActiveGroup(null)
-                  loadGroups()
-                }}
-                onCancel={() => setActiveGroup(null)}
-              />
-              <CsvImport onImported={loadGroups} />
-            </div>
+          <div className={`grid gap-8 ${readOnly ? '' : 'lg:grid-cols-[420px_1fr]'}`}>
+            {!readOnly && (
+              <div className="space-y-8">
+                <GroupForm
+                  key={activeGroup?.id || 'new-household'}
+                  activeGroup={activeGroup}
+                  onSave={() => {
+                    setActiveGroup(null)
+                    loadGroups()
+                  }}
+                  onCancel={() => setActiveGroup(null)}
+                />
+                <CsvImport onImported={loadGroups} />
+              </div>
+            )}
 
             <div className="space-y-5">
               <div className="flex flex-wrap items-center gap-3">
@@ -558,6 +610,7 @@ export default function RsvpAdminPage() {
                 filter={filter}
                 onEdit={setActiveGroup}
                 onDelete={removeGroup}
+                readOnly={readOnly}
               />
             </div>
           </div>

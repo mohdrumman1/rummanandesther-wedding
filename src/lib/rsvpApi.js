@@ -15,6 +15,7 @@ export const RSVP_API_BASE_URL =
   import.meta.env.VITE_RSVP_API_BASE_URL || defaultApiBaseUrl()
 
 const ADMIN_TOKEN_KEY = 'rsvp_admin_token'
+const ADMIN_USER_KEY = 'rsvp_admin_user'
 
 async function parseResponse(res) {
   const contentType = res.headers.get('content-type') || ''
@@ -46,8 +47,17 @@ export function getAdminToken() {
   return sessionStorage.getItem(ADMIN_TOKEN_KEY)
 }
 
+export function getAdminUser() {
+  try {
+    return JSON.parse(sessionStorage.getItem(ADMIN_USER_KEY) || 'null')
+  } catch {
+    return null
+  }
+}
+
 export function clearAdminToken() {
   sessionStorage.removeItem(ADMIN_TOKEN_KEY)
+  sessionStorage.removeItem(ADMIN_USER_KEY)
 }
 
 export async function fetchRsvp(accessCode) {
@@ -61,12 +71,13 @@ export async function submitRsvp(accessCode, payload) {
   })
 }
 
-export async function adminLogin(password) {
+export async function adminLogin({ username, password }) {
   const data = await request('/api/admin/login', {
     method: 'POST',
-    body: JSON.stringify({ password }),
+    body: JSON.stringify({ username, password }),
   })
   sessionStorage.setItem(ADMIN_TOKEN_KEY, data.token)
+  sessionStorage.setItem(ADMIN_USER_KEY, JSON.stringify(data.user || { username: 'admin', role: 'admin' }))
   return data
 }
 
