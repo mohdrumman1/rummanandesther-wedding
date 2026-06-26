@@ -77,7 +77,7 @@ Named admin users can be configured with the `ADMIN_USERS` secret. It should be 
 ]
 ```
 
-Read-only users can view households, family members, RSVP status, and copy invite links/messages. They cannot create, edit, delete, import, or export invitees. RSVP links are bearer links: anyone with a copied invite link can submit that household's RSVP.
+Read-only users can view households, invited family member names, and copy invite links/messages. They cannot create, edit, delete, import, export, or view admin notes, RSVP messages, dietary requirements, submitted timestamps, additional guest names, or attendance responses. RSVP links are bearer links: anyone with a copied invite link can submit that household's RSVP, but opening a link does not reveal stored response notes or prior attendance selections.
 
 Named users must use `passwordHash`; plaintext `password` entries are ignored. The username `admin` is reserved for the owner admin password flow.
 

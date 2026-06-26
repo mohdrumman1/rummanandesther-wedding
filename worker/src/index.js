@@ -107,6 +107,54 @@ function groupRow(row, guests = [], notes = null) {
   };
 }
 
+function publicGuestRow(guest) {
+  return {
+    id: guest.id,
+    name: guest.name,
+    isPrimary: guest.isPrimary,
+    isPartner: guest.isPartner,
+    isAdditional: guest.isAdditional,
+    primaryGuestId: guest.primaryGuestId,
+    childrenAllowed: guest.childrenAllowed,
+    maxChildren: guest.maxChildren,
+    childrenCount: 0,
+    sangeetAttending: null,
+    ceremonyAttending: null,
+  };
+}
+
+function publicRsvpGroup(group) {
+  return {
+    householdName: group.householdName,
+    accessCode: group.accessCode,
+    plusOneLimit: group.plusOneLimit,
+    guests: group.guests.filter(guest => !guest.isAdditional).map(publicGuestRow),
+    rsvp: {
+      dietaryRequirements: '',
+      message: '',
+      submittedAt: null,
+    },
+    rsvpDeadline: group.rsvpDeadline,
+  };
+}
+
+function submittedRsvpGroup(group) {
+  return {
+    ...publicRsvpGroup(group),
+    guests: group.guests.map(guest => ({
+      ...publicGuestRow(guest),
+      childrenCount: guest.childrenCount,
+      sangeetAttending: guest.sangeetAttending,
+      ceremonyAttending: guest.ceremonyAttending,
+    })),
+    rsvp: {
+      dietaryRequirements: group.rsvp.dietaryRequirements,
+      message: group.rsvp.message,
+      submittedAt: group.rsvp.submittedAt,
+    },
+  };
+}
+
 function inviteAdminHtml(request, env) {
   const inviteBaseUrl = env.INVITE_BASE_URL || new URL(request.url).origin;
   return html(`<!doctype html>
@@ -372,9 +420,7 @@ async function fetchGroupByAccessCode(env, accessCode) {
 async function handleRsvpGet(request, env, accessCode) {
   const group = await fetchGroupByAccessCode(env, accessCode);
   if (!group) return json({ error: 'RSVP link not found.' }, 404);
-  const publicGroup = { ...group };
-  delete publicGroup.id;
-  return json(publicGroup);
+  return json(publicRsvpGroup(group));
 }
 
 async function handleRsvpPost(request, env, accessCode) {
@@ -386,19 +432,18 @@ async function handleRsvpPost(request, env, accessCode) {
 
   const currentGuests = await env.DB.prepare('SELECT * FROM guests WHERE group_id = ?').bind(group.id).all();
   const currentById = new Map((currentGuests.results || []).map(guest => [guest.id, guest]));
-  const existingAdditional = (currentGuests.results || []).filter(guest => guest.is_additional === 1).length;
   const additionalNames = Array.isArray(body.additionalGuests)
     ? body.additionalGuests.map(normalizeName).filter(Boolean).slice(0, 10)
     : [];
-  const remainingSlots = Math.max(0, group.plus_one_limit - existingAdditional);
-  if (additionalNames.length > remainingSlots) {
-    return json({ error: `Only ${remainingSlots} additional guest${remainingSlots === 1 ? '' : 's'} can be added.` }, 400);
+  const additionalLimit = Math.max(0, Number(group.plus_one_limit || 0));
+  if (additionalNames.length > additionalLimit) {
+    return json({ error: `Only ${additionalLimit} additional guest${additionalLimit === 1 ? '' : 's'} can be added.` }, 400);
   }
 
   const statements = [];
   for (const submitted of body.guests) {
     const guest = currentById.get(submitted.id);
-    if (!guest) continue;
+    if (!guest || guest.is_additional === 1) continue;
     const childCount = guest.children_allowed === 1
       ? Math.max(0, Math.min(Number(submitted.childrenCount || 0), guest.max_children || 0))
       : 0;
@@ -415,6 +460,8 @@ async function handleRsvpPost(request, env, accessCode) {
     ));
   }
 
+  statements.push(env.DB.prepare('DELETE FROM guests WHERE group_id = ? AND is_additional = 1').bind(group.id));
+
   additionalNames.forEach((name, index) => {
     statements.push(env.DB.prepare(`
       INSERT INTO guests (
@@ -423,7 +470,7 @@ async function handleRsvpPost(request, env, accessCode) {
         sangeet_attending, ceremony_attending, sort_order
       )
       VALUES (?, ?, ?, 0, 0, 1, 0, 0, 0, 1, 1, ?)
-    `).bind(randomId('gst_'), group.id, name, 1000 + existingAdditional + index));
+    `).bind(randomId('gst_'), group.id, name, 1000 + index));
   });
 
   statements.push(env.DB.prepare(`
@@ -438,9 +485,7 @@ async function handleRsvpPost(request, env, accessCode) {
 
   await env.DB.batch(statements);
   const updated = await fetchGroupByAccessCode(env, accessCode);
-  const publicGroup = { ...updated };
-  delete publicGroup.id;
-  return json({ ok: true, group: publicGroup });
+  return json({ ok: true, group: submittedRsvpGroup(updated) });
 }
 
 async function listGroups(env) {
@@ -503,8 +548,24 @@ async function handleAdminLogin(request, env) {
   return json({ token: await createToken(env, user), user });
 }
 
-async function handleAdminGroupsGet(env) {
-  return json({ groups: await listGroups(env) });
+function readOnlyGroup(group) {
+  return {
+    id: group.accessCode,
+    householdName: group.householdName,
+    accessCode: group.accessCode,
+    guests: group.guests.filter(guest => !guest.isAdditional).map(guest => ({
+      name: guest.name,
+      sangeetAttending: null,
+      ceremonyAttending: null,
+      childrenCount: 0,
+    })),
+  };
+}
+
+async function handleAdminGroupsGet(env, session) {
+  const groups = await listGroups(env);
+  if (session.role === 'readonly') return json({ groups: groups.map(readOnlyGroup) });
+  return json({ groups });
 }
 
 async function handleAdminGroupCreate(request, env) {
@@ -718,7 +779,7 @@ async function route(request, env) {
   if (parts[1] === 'admin') {
     const session = await getSession(request, env);
     if (!session) return json({ error: 'Admin login required.' }, 401);
-    if (parts[2] === 'groups' && method === 'GET') return handleAdminGroupsGet(env);
+    if (parts[2] === 'groups' && method === 'GET') return handleAdminGroupsGet(env, session);
     if (session.role !== 'admin') return json({ error: 'Read-only access cannot change invitees.' }, 403);
     if (parts[2] === 'export' && method === 'GET') return handleAdminExport(env);
     if (parts[2] === 'groups' && method === 'POST') return handleAdminGroupCreate(request, env);
