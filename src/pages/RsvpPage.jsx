@@ -20,7 +20,7 @@ function RsvpFallback() {
   return (
     <motion.div variants={pageVariants} initial="initial" animate="animate" exit="exit">
       <PageHeader title="RSVP" subtitle="Your personal RSVP link is on your invitation" />
-      <section className="py-24 px-6 bg-cream">
+      <section className="py-24 px-6 sm:px-8 lg:px-12 xl:px-16 bg-cream">
         <div className="max-w-2xl mx-auto text-center">
           <span className="text-gold text-5xl block mb-8">◆</span>
           <h2 className="font-serif text-4xl md:text-5xl font-light text-ink mb-6">
@@ -52,7 +52,7 @@ function RsvpFallback() {
 
 function LoadingState() {
   return (
-    <section className="py-24 px-6 bg-cream min-h-[52vh] flex items-center">
+    <section className="py-24 px-6 sm:px-8 lg:px-12 xl:px-16 bg-cream min-h-[52vh] flex items-center">
       <div className="max-w-2xl mx-auto text-center">
         <div className="mx-auto h-10 w-10 border border-gold/30 border-t-gold rounded-full animate-spin" />
         <p className="mt-8 font-sans text-[10px] tracking-extreme uppercase text-gold">
@@ -65,7 +65,7 @@ function LoadingState() {
 
 function ErrorState({ message }) {
   return (
-    <section className="py-24 px-6 bg-cream">
+    <section className="py-24 px-6 sm:px-8 lg:px-12 xl:px-16 bg-cream">
       <div className="max-w-2xl mx-auto text-center">
         <span className="text-gold text-5xl block mb-8">◆</span>
         <h2 className="font-serif text-4xl font-light text-ink mb-4">We could not open this link</h2>
@@ -347,7 +347,7 @@ export default function RsvpPage() {
       {status === 'error' && <ErrorState message={error} />}
 
       {(status === 'ready' || status === 'saving' || status === 'submitted') && group && (
-        <section className="py-20 md:py-24 px-6 bg-cream">
+        <section className="py-20 md:py-24 px-6 sm:px-8 lg:px-12 xl:px-16 bg-cream">
           <div className="max-w-3xl mx-auto">
             {status === 'submitted' && (
               <motion.div

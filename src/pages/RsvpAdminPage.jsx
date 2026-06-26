@@ -543,7 +543,7 @@ export default function RsvpAdminPage() {
   return (
     <motion.div variants={pageVariants} initial="initial" animate="animate" exit="exit">
       <PageHeader title="RSVP Admin" subtitle="Manage households, invite links, and responses" />
-      <section className="py-16 md:py-20 px-6 bg-cream">
+      <section className="py-16 md:py-20 px-6 sm:px-8 lg:px-12 xl:px-16 bg-cream">
         <div className="max-w-7xl mx-auto space-y-8">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div className="grid grid-cols-2 md:grid-cols-5 gap-3">

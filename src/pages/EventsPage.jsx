@@ -49,7 +49,7 @@ export default function EventsPage() {
       />
 
       {/* Event cards */}
-      <section className="py-24 px-6 bg-cream">
+      <section className="py-24 px-6 sm:px-8 lg:px-12 xl:px-16 bg-cream">
         <div className="max-w-4xl mx-auto space-y-12">
           {events.map((event, i) => (
             <motion.div
@@ -112,7 +112,7 @@ export default function EventsPage() {
       </section>
 
       {/* Note */}
-      <section className="py-16 px-6 bg-cream border-t border-gold/15">
+      <section className="py-16 px-6 sm:px-8 lg:px-12 xl:px-16 bg-cream border-t border-gold/15">
         <div className="max-w-2xl mx-auto text-center">
           <motion.div
             initial={{ opacity: 0 }}

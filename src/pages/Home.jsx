@@ -119,7 +119,7 @@ export default function Home() {
       </section>
 
       {/* ─── WELCOME ─── */}
-      <section className="py-28 px-6 bg-cream overflow-hidden">
+      <section className="py-28 px-6 sm:px-8 lg:px-12 xl:px-16 bg-cream overflow-hidden">
         <div className="max-w-5xl mx-auto grid md:grid-cols-2 gap-16 lg:gap-24 items-center">
 
           {/* Photo */}
@@ -185,7 +185,7 @@ export default function Home() {
       </section>
 
       {/* ─── DATE BANNER ─── */}
-      <section className="py-24 bg-burgundy text-white text-center px-6 relative overflow-hidden">
+      <section className="py-24 bg-burgundy text-white text-center px-6 sm:px-8 lg:px-12 xl:px-16 relative overflow-hidden">
         {/* Decorative background texture */}
         <div className="absolute inset-0 opacity-5"
           style={{ backgroundImage: 'repeating-linear-gradient(45deg, #C9A96E 0, #C9A96E 1px, transparent 0, transparent 50%)', backgroundSize: '20px 20px' }}
@@ -223,7 +223,7 @@ export default function Home() {
       </section>
 
       {/* ─── EVENTS PREVIEW ─── */}
-      <section className="py-28 px-6 bg-cream">
+      <section className="py-28 px-6 sm:px-8 lg:px-12 xl:px-16 bg-cream">
         <div className="max-w-4xl mx-auto text-center mb-16">
           <motion.div
             initial={{ opacity: 0, y: 20 }}

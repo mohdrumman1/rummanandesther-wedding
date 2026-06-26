@@ -106,7 +106,7 @@ export default function AccommodationPage() {
         subtitle="We want you to feel right at home in Hunter Valley"
       />
 
-      <section className="py-24 px-6 bg-cream">
+      <section className="py-24 px-6 sm:px-8 lg:px-12 xl:px-16 bg-cream">
         <div className="max-w-5xl mx-auto">
 
           <motion.div
