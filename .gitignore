@@ -28,3 +28,7 @@ worker/.wrangler
 
 # Local Netlify folder
 .netlify
+
+# Local scaffolds and tool output
+graphify-out/
+party-invite-joy/
