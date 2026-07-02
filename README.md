@@ -81,6 +81,8 @@ Read-only users can view households, invited family member names, and aggregate 
 
 Named users must use `passwordHash`; plaintext `password` entries are ignored. The username `admin` is reserved for the owner admin password flow.
 
+The built-in `roshan` account inherits Suja's password hash and always receives the same read-only permissions. Updating Suja's password therefore updates both accounts without storing a second password hash.
+
 Guest RSVP links: `/rsvp/:accessCode`.
 
 CSV import columns: `household, guest, plus_one_limit, partner, children_allowed, max_children, notes`.

@@ -401,35 +401,42 @@ function parseAdminUsers(env) {
   }
 }
 
+function findNamedUser(username, env) {
+  const normalizedUsername = normalizeName(username).toLowerCase();
+  const users = parseAdminUsers(env);
+  const configuredUser = users.find(user =>
+    String(user.username || '').toLowerCase() === normalizedUsername
+  );
+  if (configuredUser) return configuredUser;
+  if (normalizedUsername !== 'roshan') return null;
+  const suja = users.find(user => String(user.username || '').toLowerCase() === 'suja');
+  return suja?.passwordHash
+    ? { username: 'roshan', role: 'readonly', passwordHash: suja.passwordHash }
+    : null;
+}
+
 async function namedSessionIsActive(payload, env) {
   if (!payload.username || payload.username === 'admin') return payload.role === 'admin';
-  for (const user of parseAdminUsers(env)) {
-    const role = user.role === 'admin' ? 'admin' : 'readonly';
-    if (String(user.username || '').toLowerCase() !== String(payload.username || '').toLowerCase()) continue;
-    if (role !== payload.role || !user.passwordHash) continue;
-    return payload.sessionKey === await namedUserSessionKey(user.username, role, user.passwordHash);
-  }
-  return false;
+  const user = findNamedUser(payload.username, env);
+  if (!user?.passwordHash) return false;
+  const role = user.role === 'admin' ? 'admin' : 'readonly';
+  if (role !== payload.role) return false;
+  return payload.sessionKey === await namedUserSessionKey(user.username, role, user.passwordHash);
 }
 
 async function validateNamedUser(username, password, env) {
   const normalizedUsername = normalizeName(username).toLowerCase();
   if (normalizedUsername === 'admin') return null;
   if (!normalizedUsername || !password) return null;
-  const users = parseAdminUsers(env);
-  for (const user of users) {
-    if (String(user.username || '').toLowerCase() !== normalizedUsername) continue;
-    const valid = user.passwordHash && await sha256Hex(password) === user.passwordHash;
-    if (valid) {
-      const role = user.role === 'admin' ? 'admin' : 'readonly';
-      return {
-        username: user.username,
-        role,
-        sessionKey: await namedUserSessionKey(user.username, role, user.passwordHash),
-      };
-    }
-  }
-  return null;
+  const user = findNamedUser(normalizedUsername, env);
+  const valid = user?.passwordHash && await sha256Hex(password) === user.passwordHash;
+  if (!valid) return null;
+  const role = user.role === 'admin' ? 'admin' : 'readonly';
+  return {
+    username: user.username,
+    role,
+    sessionKey: await namedUserSessionKey(user.username, role, user.passwordHash),
+  };
 }
 
 async function fetchGroupByAccessCode(env, accessCode) {
