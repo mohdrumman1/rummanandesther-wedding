@@ -214,7 +214,7 @@ function inviteAdminHtml(request, env) {
 <body>
   <header>
     <h1>Wedding Invite List</h1>
-    <p class="meta">Read-only household list, family members, and copy-ready RSVP links.</p>
+    <p class="meta">Household list and invited family members.</p>
   </header>
   <main>
     <form id="loginForm">
@@ -231,7 +231,7 @@ function inviteAdminHtml(request, env) {
       <div class="table-wrap">
         <table>
           <thead>
-            <tr><th>Household</th><th>Family Members</th><th>Invite Link</th><th>Copy</th></tr>
+            <tr id="tableHead"></tr>
           </thead>
           <tbody id="rows"></tbody>
         </table>
@@ -250,6 +250,7 @@ function inviteAdminHtml(request, env) {
     const rows = document.getElementById('rows');
     const search = document.getElementById('search');
     const count = document.getElementById('count');
+    const tableHead = document.getElementById('tableHead');
 
     function inviteLink(group) {
       return inviteBaseUrl + '/rsvp/' + encodeURIComponent(group.accessCode);
@@ -266,8 +267,11 @@ function inviteAdminHtml(request, env) {
         return (group.householdName + ' ' + guests).toLowerCase().includes(query);
       });
       count.textContent = filtered.length;
+      const canCopyInvites = filtered.some(group => Boolean(group.accessCode));
+      tableHead.innerHTML = '<th>Household</th><th>Family Members</th>' + (canCopyInvites ? '<th>Invite Link</th><th>Copy</th>' : '');
       rows.innerHTML = filtered.map((group, index) => {
         const guests = group.guests.map(guest => guest.name).join(', ');
+        if (!canCopyInvites) return '<tr><td><div class="household">' + escapeHtml(group.householdName) + '</div></td><td>' + escapeHtml(guests) + '</td></tr>';
         const link = inviteLink(group);
         return '<tr><td><div class="household">' + escapeHtml(group.householdName) + '</div></td><td>' + escapeHtml(guests) + '</td><td><div class="link">' + escapeHtml(link) + '</div></td><td><div class="actions"><button data-copy-message="' + index + '">Copy Invite</button><button data-copy-link="' + index + '">Copy Link</button></div></td></tr>';
       }).join('');
@@ -569,9 +573,8 @@ async function handleAdminLogin(request, env) {
 
 function readOnlyGroup(group) {
   return {
-    id: group.accessCode,
+    id: group.id,
     householdName: group.householdName,
-    accessCode: group.accessCode,
     summary: groupSummary(group),
     guests: group.guests.filter(guest => !guest.isAdditional).map(guest => ({
       name: guest.name,

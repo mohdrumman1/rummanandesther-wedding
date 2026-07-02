@@ -377,7 +377,8 @@ function copyInviteMessage(group, inviteLink) {
 
 function GroupTable({ groups, filter, onEdit, onDelete, readOnly }) {
   const filtered = groups.filter(group => filter === 'all' || groupStatus(group) === filter)
-  const headings = ['Household', 'Status', 'Family Members', 'Sangeet', 'Ceremony', 'Invite Link']
+  const headings = ['Household', 'Status', 'Family Members', 'Sangeet', 'Ceremony']
+  if (!readOnly) headings.push('Invite Link')
   if (!readOnly) headings.push('Actions')
 
   return (
@@ -398,12 +399,12 @@ function GroupTable({ groups, filter, onEdit, onDelete, readOnly }) {
               const status = groupStatus(group)
               const sangeetYes = group.summary?.sangeetYes ?? group.guests.filter(guest => guest.sangeetAttending === true).length
               const ceremonyYes = group.summary?.ceremonyYes ?? group.guests.filter(guest => guest.ceremonyAttending === true).length
-              const inviteLink = buildInviteLink(group.accessCode)
+              const inviteLink = readOnly ? '' : buildInviteLink(group.accessCode)
               return (
                 <tr key={group.id} className="border-b border-gold/10 align-top">
                   <td className="px-4 py-5">
                     <p className="font-serif text-xl text-ink">{group.householdName}</p>
-                    <p className="font-sans text-[12px] text-ink/40">{group.accessCode}</p>
+                    {!readOnly && <p className="font-sans text-[12px] text-ink/40">{group.accessCode}</p>}
                   </td>
                   <td className="px-4 py-5">
                     <span className={`inline-block border px-3 py-2 font-sans text-[10px] tracking-ultra uppercase ${statusClass(status)}`}>
@@ -422,7 +423,7 @@ function GroupTable({ groups, filter, onEdit, onDelete, readOnly }) {
                   <td className="px-4 py-5 font-sans text-[13px] text-ink/60">
                     {ceremonyYes} yes
                   </td>
-                  <td className="px-4 py-5">
+                  {!readOnly && <td className="px-4 py-5">
                     <div className="flex flex-wrap gap-3">
                       <button
                         type="button"
@@ -440,7 +441,7 @@ function GroupTable({ groups, filter, onEdit, onDelete, readOnly }) {
                       </button>
                     </div>
                     <p className="mt-2 max-w-[260px] truncate font-sans text-[12px] text-ink/40">{inviteLink}</p>
-                  </td>
+                  </td>}
                   {!readOnly && (
                     <td className="px-4 py-5">
                       <div className="flex gap-4">

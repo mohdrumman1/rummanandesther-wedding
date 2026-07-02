@@ -79,3 +79,8 @@ Three-part fix in commit `cbbebd5`:
 **Verify:** Check `dist/assets/index-*.js` timestamp is newer than the last fix commit. Grep for `summary.status` in the bundle to confirm the frontend fix is included.
 
 **If it recurs:** Always run `npm run build` after any source edit and before deploying to Netlify. Also deploy the worker via `npm run worker:deploy` after any `worker/src/index.js` changes.
+## 2026-07-02 — Read-only access must exclude bearer invite links
+
+**Learning:** A view-only user should receive only the information needed to inspect the invite list. Do not send RSVP access codes or invite URLs to read-only clients, and do not render Copy Invite or Copy Link controls. Hiding the buttons alone is insufficient because a URL present in the API response or page can still be copied or shared accidentally.
+
+**Rule:** Treat bearer RSVP links as a send-invitation permission. Keep them server-side unavailable to read-only roles, and verify every admin surface before granting or changing user access.
