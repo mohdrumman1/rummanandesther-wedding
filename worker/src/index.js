@@ -85,9 +85,12 @@ function guestRow(row) {
     primaryGuestId: row.primary_guest_id,
     childrenAllowed: row.children_allowed === 1,
     maxChildren: row.max_children,
-    childrenCount: row.children_count,
+    childrenCount: Math.max(row.ceremony_children_count || 0, row.reception_children_count || 0),
+    ceremonyChildrenCount: row.ceremony_children_count || 0,
+    receptionChildrenCount: row.reception_children_count || 0,
     sangeetAttending: asBool(row.sangeet_attending),
     ceremonyAttending: asBool(row.ceremony_attending),
+    receptionAttending: asBool(row.reception_attending),
   };
 }
 
@@ -119,8 +122,11 @@ function publicGuestRow(guest) {
     childrenAllowed: guest.childrenAllowed,
     maxChildren: guest.maxChildren,
     childrenCount: 0,
+    ceremonyChildrenCount: 0,
+    receptionChildrenCount: 0,
     sangeetAttending: null,
     ceremonyAttending: null,
+    receptionAttending: null,
   };
 }
 
@@ -145,8 +151,11 @@ function submittedRsvpGroup(group) {
     guests: group.guests.map(guest => ({
       ...publicGuestRow(guest),
       childrenCount: guest.childrenCount,
+      ceremonyChildrenCount: guest.ceremonyChildrenCount,
+      receptionChildrenCount: guest.receptionChildrenCount,
       sangeetAttending: guest.sangeetAttending,
       ceremonyAttending: guest.ceremonyAttending,
+      receptionAttending: guest.receptionAttending,
     })),
     rsvp: {
       dietaryRequirements: group.rsvp.dietaryRequirements,
@@ -159,17 +168,19 @@ function submittedRsvpGroup(group) {
 function groupSummary(group) {
   const guests = group.guests || [];
   const allAnswered = guests.length > 0 && guests.every(guest =>
-    guest.sangeetAttending !== null && guest.ceremonyAttending !== null
+    guest.sangeetAttending !== null && guest.ceremonyAttending !== null && guest.receptionAttending !== null
   );
   const someAnswered = guests.some(guest =>
-    guest.sangeetAttending !== null || guest.ceremonyAttending !== null
+    guest.sangeetAttending !== null || guest.ceremonyAttending !== null || guest.receptionAttending !== null
   );
   return {
     status: !guests.length ? 'empty' : allAnswered ? 'complete' : someAnswered ? 'partial' : 'pending',
     sangeetYes: guests.filter(guest => guest.sangeetAttending === true).length,
     ceremonyYes: guests.filter(guest => guest.ceremonyAttending === true).length,
+    receptionYes: guests.filter(guest => guest.receptionAttending === true).length,
     sangeetNo: guests.filter(guest => guest.sangeetAttending === false).length,
     ceremonyNo: guests.filter(guest => guest.ceremonyAttending === false).length,
+    receptionNo: guests.filter(guest => guest.receptionAttending === false).length,
     children: guests.reduce((total, guest) => total + Number(guest.childrenCount || 0), 0),
   };
 }
@@ -450,7 +461,7 @@ async function fetchGroupByAccessCode(env, accessCode) {
 async function handleRsvpGet(request, env, accessCode) {
   const group = await fetchGroupByAccessCode(env, accessCode);
   if (!group) return json({ error: 'RSVP link not found.' }, 404);
-  return json(publicRsvpGroup(group));
+  return json(group.rsvp.submittedAt ? submittedRsvpGroup(group) : publicRsvpGroup(group));
 }
 
 async function handleRsvpPost(request, env, accessCode) {
@@ -462,11 +473,25 @@ async function handleRsvpPost(request, env, accessCode) {
 
   const currentGuests = await env.DB.prepare('SELECT * FROM guests WHERE group_id = ?').bind(group.id).all();
   const currentById = new Map((currentGuests.results || []).map(guest => [guest.id, guest]));
-  const additionalNames = Array.isArray(body.additionalGuests)
-    ? body.additionalGuests.map(normalizeName).filter(Boolean).slice(0, 10)
+  const existingAdditionalGuests = body.guests
+    .map(submitted => ({ submitted, current: currentById.get(submitted.id) }))
+    .filter(({ current }) => current?.is_additional === 1)
+    .map(({ submitted, current }) => ({
+      name: current.name,
+      sangeetAttending: submitted.sangeetAttending,
+      ceremonyAttending: submitted.ceremonyAttending,
+      receptionAttending: Object.hasOwn(submitted, 'receptionAttending')
+        ? submitted.receptionAttending
+        : submitted.ceremonyAttending,
+    }));
+  const newAdditionalGuests = Array.isArray(body.additionalGuests)
+    ? body.additionalGuests.map(item => typeof item === 'string'
+      ? { name: normalizeName(item), sangeetAttending: true, ceremonyAttending: true, receptionAttending: true }
+      : { ...item, name: normalizeName(item?.name) }).filter(item => item.name).slice(0, 10)
     : [];
+  const additionalGuests = [...existingAdditionalGuests, ...newAdditionalGuests];
   const additionalLimit = Math.max(0, Number(group.plus_one_limit || 0));
-  if (additionalNames.length > additionalLimit) {
+  if (additionalGuests.length > additionalLimit) {
     return json({ error: `Only ${additionalLimit} additional guest${additionalLimit === 1 ? '' : 's'} can be added.` }, 400);
   }
 
@@ -474,17 +499,27 @@ async function handleRsvpPost(request, env, accessCode) {
   for (const submitted of body.guests) {
     const guest = currentById.get(submitted.id);
     if (!guest || guest.is_additional === 1) continue;
-    const childCount = guest.children_allowed === 1
-      ? Math.max(0, Math.min(Number(submitted.childrenCount || 0), guest.max_children || 0))
+    const receptionAttending = Object.hasOwn(submitted, 'receptionAttending')
+      ? submitted.receptionAttending
+      : submitted.ceremonyAttending;
+    const ceremonyChildrenCount = guest.children_allowed === 1 && submitted.ceremonyAttending === true
+      ? Math.max(0, Math.min(Number(submitted.ceremonyChildrenCount ?? submitted.childrenCount ?? 0), guest.max_children || 0))
+      : 0;
+    const receptionChildrenCount = guest.children_allowed === 1 && receptionAttending === true
+      ? Math.max(0, Math.min(Number(submitted.receptionChildrenCount ?? submitted.childrenCount ?? 0), guest.max_children || 0))
       : 0;
     statements.push(env.DB.prepare(`
       UPDATE guests
-      SET sangeet_attending = ?, ceremony_attending = ?, children_count = ?, updated_at = CURRENT_TIMESTAMP
+      SET sangeet_attending = ?, ceremony_attending = ?, reception_attending = ?,
+          children_count = ?, ceremony_children_count = ?, reception_children_count = ?, updated_at = CURRENT_TIMESTAMP
       WHERE id = ? AND group_id = ?
     `).bind(
       boolToDb(submitted.sangeetAttending),
       boolToDb(submitted.ceremonyAttending),
-      childCount,
+      boolToDb(receptionAttending),
+      Math.max(ceremonyChildrenCount, receptionChildrenCount),
+      ceremonyChildrenCount,
+      receptionChildrenCount,
       guest.id,
       group.id,
     ));
@@ -492,15 +527,21 @@ async function handleRsvpPost(request, env, accessCode) {
 
   statements.push(env.DB.prepare('DELETE FROM guests WHERE group_id = ? AND is_additional = 1').bind(group.id));
 
-  additionalNames.forEach((name, index) => {
+  additionalGuests.forEach((additionalGuest, index) => {
     statements.push(env.DB.prepare(`
       INSERT INTO guests (
         id, group_id, name, is_primary, is_partner, is_additional,
         children_allowed, max_children, children_count,
-        sangeet_attending, ceremony_attending, sort_order
+        sangeet_attending, ceremony_attending, reception_attending, sort_order
       )
-      VALUES (?, ?, ?, 0, 0, 1, 0, 0, 0, 1, 1, ?)
-    `).bind(randomId('gst_'), group.id, name, 1000 + index));
+      VALUES (?, ?, ?, 0, 0, 1, 0, 0, 0, ?, ?, ?, ?)
+    `).bind(
+      randomId('gst_'), group.id, additionalGuest.name,
+      boolToDb(additionalGuest.sangeetAttending),
+      boolToDb(additionalGuest.ceremonyAttending),
+      boolToDb(additionalGuest.receptionAttending),
+      1000 + index,
+    ));
   });
 
   statements.push(env.DB.prepare(`
@@ -587,6 +628,7 @@ function readOnlyGroup(group) {
       name: guest.name,
       sangeetAttending: null,
       ceremonyAttending: null,
+      receptionAttending: null,
       childrenCount: 0,
     })),
   };
@@ -639,9 +681,10 @@ async function replaceGroupGuests(env, groupId, guests) {
       INSERT INTO guests (
         id, group_id, name, is_primary, is_partner, is_additional,
         primary_guest_id, children_allowed, max_children, children_count,
-        sangeet_attending, ceremony_attending, sort_order
+        ceremony_children_count, reception_children_count,
+        sangeet_attending, ceremony_attending, reception_attending, sort_order
       )
-      VALUES (?, ?, ?, ?, ?, ?, NULL, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).bind(
       guest.id || randomId('gst_'),
       groupId,
@@ -651,9 +694,12 @@ async function replaceGroupGuests(env, groupId, guests) {
       guest.isAdditional ? 1 : 0,
       guest.childrenAllowed ? 1 : 0,
       Math.max(0, Number(guest.maxChildren || 0)),
-      Math.max(0, Number(guest.childrenCount || 0)),
+      guest.childrenAllowed ? Math.max(0, Number(guest.childrenCount || 0)) : 0,
+      guest.childrenAllowed ? Math.max(0, Number(guest.ceremonyChildrenCount ?? guest.childrenCount ?? 0)) : 0,
+      guest.childrenAllowed ? Math.max(0, Number(guest.receptionChildrenCount ?? guest.childrenCount ?? 0)) : 0,
       boolToDb(guest.sangeetAttending),
       boolToDb(guest.ceremonyAttending),
+      boolToDb(guest.receptionAttending),
       index,
     ));
   if (statements.length) await env.DB.batch(statements);
@@ -764,7 +810,7 @@ function csvEscape(value) {
 
 async function handleAdminExport(env) {
   const groups = await listGroups(env);
-  const rows = [['household', 'guest', 'sangeet', 'ceremony', 'children', 'dietary', 'message', 'submitted_at', 'invite_link']];
+  const rows = [['household', 'guest', 'sangeet', 'ceremony', 'reception', 'ceremony_children', 'reception_children', 'dietary', 'message', 'submitted_at', 'invite_link']];
   groups.forEach(group => {
     group.guests.forEach(guest => {
       rows.push([
@@ -772,7 +818,9 @@ async function handleAdminExport(env) {
         guest.name,
         guest.sangeetAttending === null ? 'pending' : guest.sangeetAttending ? 'yes' : 'no',
         guest.ceremonyAttending === null ? 'pending' : guest.ceremonyAttending ? 'yes' : 'no',
-        guest.childrenCount,
+        guest.receptionAttending === null ? 'pending' : guest.receptionAttending ? 'yes' : 'no',
+        guest.ceremonyChildrenCount,
+        guest.receptionChildrenCount,
         group.rsvp.dietaryRequirements,
         group.rsvp.message,
         group.rsvp.submittedAt || '',

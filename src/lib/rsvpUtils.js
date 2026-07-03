@@ -1,6 +1,7 @@
 export const eventLabels = {
   sangeet: 'Sangeet',
-  ceremony: 'Ceremony & Reception',
+  ceremony: 'Ceremony',
+  reception: 'Reception',
 }
 
 export function isAnswered(value) {
@@ -18,11 +19,11 @@ export function groupStatus(group) {
   const guests = group.guests || []
   if (!guests.length) return 'empty'
   const allAnswered = guests.every(guest =>
-    isAnswered(guest.sangeetAttending) && isAnswered(guest.ceremonyAttending)
+    isAnswered(guest.sangeetAttending) && isAnswered(guest.ceremonyAttending) && isAnswered(guest.receptionAttending)
   )
   if (allAnswered) return 'complete'
   const someAnswered = guests.some(guest =>
-    isAnswered(guest.sangeetAttending) || isAnswered(guest.ceremonyAttending)
+    isAnswered(guest.sangeetAttending) || isAnswered(guest.ceremonyAttending) || isAnswered(guest.receptionAttending)
   )
   return someAnswered ? 'partial' : 'pending'
 }
@@ -34,8 +35,10 @@ export function rsvpCounts(groups) {
     completeHouseholds: 0,
     sangeetYes: 0,
     ceremonyYes: 0,
+    receptionYes: 0,
     sangeetNo: 0,
     ceremonyNo: 0,
+    receptionNo: 0,
     children: 0,
   }
 
@@ -46,16 +49,20 @@ export function rsvpCounts(groups) {
     if (group.summary) {
       counts.sangeetYes += Number(group.summary.sangeetYes || 0)
       counts.ceremonyYes += Number(group.summary.ceremonyYes || 0)
+      counts.receptionYes += Number(group.summary.receptionYes || 0)
       counts.sangeetNo += Number(group.summary.sangeetNo || 0)
       counts.ceremonyNo += Number(group.summary.ceremonyNo || 0)
+      counts.receptionNo += Number(group.summary.receptionNo || 0)
       counts.children += Number(group.summary.children || 0)
       return counts
     }
     group.guests.forEach(guest => {
       if (guest.sangeetAttending === true) counts.sangeetYes += 1
       if (guest.ceremonyAttending === true) counts.ceremonyYes += 1
+      if (guest.receptionAttending === true) counts.receptionYes += 1
       if (guest.sangeetAttending === false) counts.sangeetNo += 1
       if (guest.ceremonyAttending === false) counts.ceremonyNo += 1
+      if (guest.receptionAttending === false) counts.receptionNo += 1
       counts.children += Number(guest.childrenCount || 0)
     })
     return counts
@@ -70,7 +77,10 @@ export function blankGuest() {
     childrenAllowed: false,
     maxChildren: 0,
     childrenCount: 0,
+    ceremonyChildrenCount: 0,
+    receptionChildrenCount: 0,
     sangeetAttending: null,
     ceremonyAttending: null,
+    receptionAttending: null,
   }
 }

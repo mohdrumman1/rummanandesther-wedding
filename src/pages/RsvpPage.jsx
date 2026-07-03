@@ -99,16 +99,30 @@ function AttendanceButton({ selected, children, onClick }) {
   )
 }
 
-function GuestCard({ guest, onChange }) {
-  const canCountChildren = guest.childrenAllowed && guest.ceremonyAttending === true
+function ChildCounter({ label, count, max, enabled, guestName, onChange }) {
+  return (
+    <div>
+      <label className={labelClass}>{label}</label>
+      <div className="flex items-center gap-3">
+        <button type="button" disabled={!enabled || count <= 0} onClick={() => onChange(Math.max(0, count - 1))}
+          className="h-11 w-11 border border-gold/25 bg-cream text-ink disabled:opacity-35" aria-label={`Decrease ${label.toLowerCase()} for ${guestName}`}>-</button>
+        <span className="w-10 text-center font-serif text-2xl text-ink">{count || 0}</span>
+        <button type="button" disabled={!enabled || count >= max} onClick={() => onChange(Math.min(max, count + 1))}
+          className="h-11 w-11 border border-gold/25 bg-cream text-ink disabled:opacity-35" aria-label={`Increase ${label.toLowerCase()} for ${guestName}`}>+</button>
+        {!enabled && <span className="font-sans text-[12px] text-ink/45 font-light">Select yes for this event to add children.</span>}
+      </div>
+    </div>
+  )
+}
 
+function GuestCard({ guest, onChange }) {
   return (
     <div className="border border-gold/25 bg-white p-6 md:p-7 space-y-5">
       <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
         <div>
           <h3 className="font-serif text-2xl font-light text-ink">{guest.name}</h3>
           <p className="font-sans text-[12px] text-ink/45 font-light">
-            Sangeet: {responseText(guest.sangeetAttending)} · Ceremony: {responseText(guest.ceremonyAttending)}
+            Sangeet: {responseText(guest.sangeetAttending)} · Ceremony: {responseText(guest.ceremonyAttending)} · Reception: {responseText(guest.receptionAttending)}
           </p>
         </div>
         {guest.isAdditional && (
@@ -118,7 +132,7 @@ function GuestCard({ guest, onChange }) {
         )}
       </div>
 
-      <div className="grid gap-5 md:grid-cols-2">
+      <div className="grid gap-5 md:grid-cols-3">
         <div>
           <label className={labelClass}>Sangeet</label>
           <div className="grid grid-cols-2 gap-3">
@@ -137,7 +151,7 @@ function GuestCard({ guest, onChange }) {
           </div>
         </div>
         <div>
-          <label className={labelClass}>Ceremony & Reception</label>
+          <label className={labelClass}>Ceremony</label>
           <div className="grid grid-cols-2 gap-3">
             <AttendanceButton
               selected={guest.ceremonyAttending === true}
@@ -147,7 +161,24 @@ function GuestCard({ guest, onChange }) {
             </AttendanceButton>
             <AttendanceButton
               selected={guest.ceremonyAttending === false}
-              onClick={() => onChange({ ...guest, ceremonyAttending: false, childrenCount: 0 })}
+              onClick={() => onChange({ ...guest, ceremonyAttending: false, ceremonyChildrenCount: 0 })}
+            >
+              No
+            </AttendanceButton>
+          </div>
+        </div>
+        <div>
+          <label className={labelClass}>Reception</label>
+          <div className="grid grid-cols-2 gap-3">
+            <AttendanceButton
+              selected={guest.receptionAttending === true}
+              onClick={() => onChange({ ...guest, receptionAttending: true })}
+            >
+              Yes
+            </AttendanceButton>
+            <AttendanceButton
+              selected={guest.receptionAttending === false}
+              onClick={() => onChange({ ...guest, receptionAttending: false, receptionChildrenCount: 0 })}
             >
               No
             </AttendanceButton>
@@ -156,34 +187,13 @@ function GuestCard({ guest, onChange }) {
       </div>
 
       {guest.childrenAllowed && (
-        <div className="pt-5 border-t border-gold/15">
-          <label className={labelClass}>Children attending Ceremony & Reception</label>
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              disabled={!canCountChildren || guest.childrenCount <= 0}
-              onClick={() => onChange({ ...guest, childrenCount: Math.max(0, guest.childrenCount - 1) })}
-              className="h-11 w-11 border border-gold/25 bg-cream text-ink disabled:opacity-35"
-              aria-label={`Decrease children for ${guest.name}`}
-            >
-              -
-            </button>
-            <span className="w-10 text-center font-serif text-2xl text-ink">{guest.childrenCount || 0}</span>
-            <button
-              type="button"
-              disabled={!canCountChildren || guest.childrenCount >= guest.maxChildren}
-              onClick={() => onChange({ ...guest, childrenCount: Math.min(guest.maxChildren, guest.childrenCount + 1) })}
-              className="h-11 w-11 border border-gold/25 bg-cream text-ink disabled:opacity-35"
-              aria-label={`Increase children for ${guest.name}`}
-            >
-              +
-            </button>
-            {!canCountChildren && (
-              <span className="font-sans text-[12px] text-ink/45 font-light">
-                Select yes for Ceremony & Reception to add children.
-              </span>
-            )}
-          </div>
+        <div className="pt-5 border-t border-gold/15 grid gap-5 md:grid-cols-2">
+          <ChildCounter label="Children attending Ceremony" count={guest.ceremonyChildrenCount || 0}
+            max={guest.maxChildren} enabled={guest.ceremonyAttending === true} guestName={guest.name}
+            onChange={count => onChange({ ...guest, ceremonyChildrenCount: count })} />
+          <ChildCounter label="Children attending Reception" count={guest.receptionChildrenCount || 0}
+            max={guest.maxChildren} enabled={guest.receptionAttending === true} guestName={guest.name}
+            onChange={count => onChange({ ...guest, receptionChildrenCount: count })} />
         </div>
       )}
     </div>
@@ -196,7 +206,12 @@ function AdditionalGuestForm({ remaining, pending, setPending }) {
   function addGuest() {
     const trimmed = name.trim().replace(/\s+/g, ' ')
     if (!trimmed || pending.length >= remaining) return
-    setPending([...pending, trimmed])
+    setPending([...pending, {
+      name: trimmed,
+      sangeetAttending: null,
+      ceremonyAttending: null,
+      receptionAttending: null,
+    }])
     setName('')
   }
 
@@ -220,16 +235,28 @@ function AdditionalGuestForm({ remaining, pending, setPending }) {
 
       {pending.length > 0 && (
         <div className="space-y-3">
-          {pending.map((guestName, index) => (
-            <div key={`${guestName}-${index}`} className="flex items-center justify-between border border-gold/20 bg-cream px-4 py-3">
-              <span className="font-sans text-[13px] text-ink/70">{guestName}</span>
-              <button
-                type="button"
-                onClick={() => setPending(pending.filter((_, itemIndex) => itemIndex !== index))}
-                className="font-sans text-[10px] tracking-ultra uppercase text-burgundy"
-              >
-                Remove
-              </button>
+          {pending.map((guest, index) => (
+            <div key={`${guest.name}-${index}`} className="border border-gold/20 bg-cream p-4 space-y-4">
+              <div className="flex items-center justify-between">
+                <span className="font-sans text-[13px] text-ink/70">{guest.name}</span>
+                <button type="button" onClick={() => setPending(pending.filter((_, itemIndex) => itemIndex !== index))}
+                  className="font-sans text-[10px] tracking-ultra uppercase text-burgundy">Remove</button>
+              </div>
+              <div className="grid gap-4 md:grid-cols-3">
+                {[
+                  ['Sangeet', 'sangeetAttending'],
+                  ['Ceremony', 'ceremonyAttending'],
+                  ['Reception', 'receptionAttending'],
+                ].map(([label, field]) => (
+                  <div key={field}>
+                    <label className={labelClass}>{label}</label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <AttendanceButton selected={guest[field] === true} onClick={() => setPending(pending.map((item, itemIndex) => itemIndex === index ? { ...item, [field]: true } : item))}>Yes</AttendanceButton>
+                      <AttendanceButton selected={guest[field] === false} onClick={() => setPending(pending.map((item, itemIndex) => itemIndex === index ? { ...item, [field]: false } : item))}>No</AttendanceButton>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           ))}
         </div>
@@ -309,10 +336,16 @@ export default function RsvpPage() {
     event.preventDefault()
     setError('')
     const incomplete = guests.filter(guest =>
-      !isAnswered(guest.sangeetAttending) || !isAnswered(guest.ceremonyAttending)
+      !isAnswered(guest.sangeetAttending) || !isAnswered(guest.ceremonyAttending) || !isAnswered(guest.receptionAttending)
     )
     if (incomplete.length) {
       setError('Please respond yes or no for each guest and each event before submitting.')
+      return
+    }
+    if (pendingAdditional.some(guest =>
+      !isAnswered(guest.sangeetAttending) || !isAnswered(guest.ceremonyAttending) || !isAnswered(guest.receptionAttending)
+    )) {
+      setError('Please respond yes or no for each additional guest and each event before submitting.')
       return
     }
     setStatus('saving')

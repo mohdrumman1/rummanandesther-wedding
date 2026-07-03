@@ -192,6 +192,8 @@ function GuestEditor({ guests, setGuests }) {
                   childrenAllowed: event.target.checked,
                   maxChildren: event.target.checked ? Math.max(1, guest.maxChildren || 1) : 0,
                   childrenCount: event.target.checked ? guest.childrenCount || 0 : 0,
+                  ceremonyChildrenCount: event.target.checked ? guest.ceremonyChildrenCount || 0 : 0,
+                  receptionChildrenCount: event.target.checked ? guest.receptionChildrenCount || 0 : 0,
                 })}
                 className="accent-burgundy"
               />
@@ -377,7 +379,7 @@ function copyInviteMessage(group, inviteLink) {
 
 function GroupTable({ groups, filter, onEdit, onDelete, readOnly }) {
   const filtered = groups.filter(group => filter === 'all' || groupStatus(group) === filter)
-  const headings = ['Household', 'Status', 'Family Members', 'Sangeet', 'Ceremony']
+  const headings = ['Household', 'Status', 'Family Members', 'Sangeet', 'Ceremony', 'Reception']
   if (!readOnly) headings.push('Invite Link')
   if (!readOnly) headings.push('Actions')
 
@@ -399,6 +401,7 @@ function GroupTable({ groups, filter, onEdit, onDelete, readOnly }) {
               const status = groupStatus(group)
               const sangeetYes = group.summary?.sangeetYes ?? group.guests.filter(guest => guest.sangeetAttending === true).length
               const ceremonyYes = group.summary?.ceremonyYes ?? group.guests.filter(guest => guest.ceremonyAttending === true).length
+              const receptionYes = group.summary?.receptionYes ?? group.guests.filter(guest => guest.receptionAttending === true).length
               const inviteLink = readOnly ? '' : buildInviteLink(group.accessCode)
               return (
                 <tr key={group.id} className="border-b border-gold/10 align-top">
@@ -422,6 +425,9 @@ function GroupTable({ groups, filter, onEdit, onDelete, readOnly }) {
                   </td>
                   <td className="px-4 py-5 font-sans text-[13px] text-ink/60">
                     {ceremonyYes} yes
+                  </td>
+                  <td className="px-4 py-5 font-sans text-[13px] text-ink/60">
+                    {receptionYes} yes
                   </td>
                   {!readOnly && <td className="px-4 py-5">
                     <div className="flex flex-wrap gap-3">
@@ -554,6 +560,7 @@ export default function RsvpAdminPage() {
                 ['Pending', counts.pendingHouseholds],
                 ['Sangeet Yes', counts.sangeetYes],
                 ['Ceremony Yes', counts.ceremonyYes],
+                ['Reception Yes', counts.receptionYes],
               ].map(([label, value]) => (
                 <div key={label} className="border border-gold/25 bg-white px-5 py-4">
                   <p className="font-sans text-[10px] tracking-ultra uppercase text-ink/40">{label}</p>
