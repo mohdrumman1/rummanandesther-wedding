@@ -165,7 +165,7 @@ function GuestEditor({ guests, setGuests }) {
               Remove
             </button>
           </div>
-          <div className="grid gap-3 sm:grid-cols-3">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <label className="flex items-center gap-2 font-sans text-[12px] text-ink/60">
               <input
                 type="checkbox"
@@ -198,6 +198,33 @@ function GuestEditor({ guests, setGuests }) {
                 className="accent-burgundy"
               />
               Can bring children
+            </label>
+            <label className="flex items-center gap-2 font-sans text-[12px] text-ink/60">
+              <input
+                type="checkbox"
+                checked={guest.sangeetInvited !== false}
+                onChange={event => updateGuest(index, { sangeetInvited: event.target.checked })}
+                className="accent-burgundy"
+              />
+              Invited to Sangeet
+            </label>
+            <label className="flex items-center gap-2 font-sans text-[12px] text-ink/60">
+              <input
+                type="checkbox"
+                checked={guest.ceremonyInvited !== false}
+                onChange={event => updateGuest(index, { ceremonyInvited: event.target.checked })}
+                className="accent-burgundy"
+              />
+              Invited to Ceremony
+            </label>
+            <label className="flex items-center gap-2 font-sans text-[12px] text-ink/60">
+              <input
+                type="checkbox"
+                checked={guest.receptionInvited !== false}
+                onChange={event => updateGuest(index, { receptionInvited: event.target.checked })}
+                className="accent-burgundy"
+              />
+              Invited to Reception
             </label>
           </div>
           {guest.childrenAllowed && (
@@ -351,14 +378,14 @@ function CsvImport({ onImported }) {
       <div>
         <h2 className="font-serif text-3xl font-light text-ink">CSV Import</h2>
         <p className="mt-2 font-sans text-[12px] text-ink/45 font-light leading-relaxed">
-          Columns: household, guest, plus_one_limit, partner, children_allowed, max_children, notes.
+          Columns: household, guest, plus_one_limit, partner, children_allowed, max_children, sangeet_invited, ceremony_invited, reception_invited, notes.
         </p>
       </div>
       <textarea
         value={csv}
         onChange={event => setCsv(event.target.value)}
         rows={7}
-        placeholder={'household,guest,plus_one_limit,partner,children_allowed,max_children,notes\nAhmed Family,Amina Ahmed,1,false,true,2,\nAhmed Family,Omar Ahmed,1,true,false,0,'}
+        placeholder={'household,guest,plus_one_limit,partner,children_allowed,max_children,sangeet_invited,ceremony_invited,reception_invited,notes\nAhmed Family,Amina Ahmed,1,false,true,2,yes,yes,yes,\nAhmed Family,Omar Ahmed,1,true,false,0,yes,yes,yes,'}
         className={`${inputClass} resize-none font-mono text-[12px]`}
       />
       {status && <p className="font-sans text-[13px] text-ink/60">{status}</p>}
@@ -609,7 +636,7 @@ export default function RsvpAdminPage() {
 
           <div className={`grid gap-8 ${readOnly ? '' : 'lg:grid-cols-[420px_1fr]'}`}>
             {!readOnly && (
-              <div className="space-y-8">
+              <div className="space-y-8 lg:sticky lg:top-24 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto lg:pb-4">
                 <GroupForm
                   key={activeGroup?.id || 'new-household'}
                   activeGroup={activeGroup}

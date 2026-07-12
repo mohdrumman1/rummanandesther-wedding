@@ -1,3 +1,38 @@
+## 2026-07-12 — Plus-one INSERT missed new nullable-flag column, stuck households at "partial"
+
+**Tags:** rsvp, worker, additional-guests, insert, invited-flag, silent-default
+**Status:** Fixed
+
+**Issue:** After adding `sangeet_invited INTEGER NOT NULL DEFAULT 1` (migration 0010) and making the RSVP page hide the Sangeet question for guests with `sangeet_invited=0`, households with primary guests marked `sangeet_invited=0` who added a plus-one via the public RSVP form were stuck at status "partial" in the admin dashboard. Second symptom: an admin who unchecked "Invited to Sangeet" for a plus-one in the admin UI would see that override silently wiped back to `true` the next time the household resubmitted their RSVP via the public link.
+
+**Investigation:**
+1. Reviewer traced the `handleRsvpPost` path (`worker/src/index.js` ~L470-560) and noticed the additional-guest INSERT column list omitted `sangeet_invited`, unlike the two admin write paths (`handleAdminGroupCreate`, `replaceGroupGuests`) which had been updated to include it.
+2. Confirmed via `grep -n 'INTO guests' worker/src/index.js` — three insert sites, only two updated.
+3. Backed by an end-to-end reproduction: local household with `sangeet_invited=0` + `plus_one_limit=2` submitted from public form with `additionalGuests: [{...sangeetAttending: null, ceremonyAttending: T, receptionAttending: T}]`. Row landed with `sangeet_invited=1` (from column default) and `sangeet_attending=NULL`. `groupSummary`/`groupStatus` require `sangeet_invited=false OR sangeet_attending !== null` to count as answered — new plus-one satisfied neither, household stayed "partial" forever.
+
+**Root cause:**
+`handleRsvpPost` at `worker/src/index.js:534-548` inserts new/re-inserted additional-guest rows. The column list did not include `sangeet_invited`, so SQLite fell back to the schema `DEFAULT 1`. This diverged from the two admin write paths which had been updated correctly. The frontend `AdditionalGuestForm` also did not tag pending plus-ones with `sangeetInvited`, so even if the backend had accepted a value, the payload would have been empty.
+
+**Fix (commit adding this entry):**
+
+1. **`worker/src/index.js`** — Added `sangeetInvited` (and, as part of a follow-up generalization, `ceremonyInvited` and `receptionInvited`) to:
+   - `existingAdditionalGuests` mapper: `sangeetInvited: current.sangeet_invited !== 0` (pull from DB row).
+   - `newAdditionalGuests` mapper: `sangeetInvited: item?.sangeetInvited !== false` (pull from payload, default true).
+   - The plus-one INSERT column list + bind list, binding `additionalGuest.sangeetInvited === false ? 0 : 1`.
+
+2. **`src/pages/RsvpPage.jsx`** — `AdditionalGuestForm.addGuest()` now includes `sangeetInvited` (from a household-level prop derived by `RsvpPage` from `guests.some(g => g.sangeetInvited !== false)`) in each new pending plus-one entry.
+
+3. Grepped every `INSERT INTO guests` in the Worker and confirmed all three sites (`handleRsvpPost` plus-one, `handleAdminGroupCreate`, `replaceGroupGuests`) now include the invited flag. Same audit applies to `ceremony_invited` and `reception_invited` added alongside.
+
+**Verify:**
+- `npm run lint` — clean.
+- `npm run build` — clean.
+- Local end-to-end trace: household with `sangeet_invited=0` on both primaries + `plus_one_limit=2`. Public form adds a plus-one with `sangeetAttending: null, ceremonyAttending: true, receptionAttending: true, sangeetInvited: false`. Worker INSERT lands the row with `sangeet_invited=0`. `groupStatus` computes "complete". Confirmed via `SELECT ... FROM guests WHERE is_additional=1` and `GET /api/admin/groups` summary.
+
+**If it recurs:** Any time a new column is added to `guests`, immediately grep `INSERT INTO guests` in `worker/src/index.js` — there are THREE insert sites. Check each. Then grep the frontend for wherever `pendingAdditional` / `body.additionalGuests` is built and confirm the new field is threaded in. The additional-guest path is DELETE+INSERT on every submit, so any column that isn't explicitly included silently reverts to its schema default and can wipe admin overrides.
+
+---
+
 ## 2026-06-26 — Read-only RSVP admin summary counters all zero
 
 **Tags:** rsvp, admin, read-only, dashboard, counters

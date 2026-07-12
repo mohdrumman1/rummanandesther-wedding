@@ -32,3 +32,6 @@ worker/.wrangler
 # Local scaffolds and tool output
 graphify-out/
 party-invite-joy/
+
+# Local docs — never committed
+.local-docs/

@@ -116,14 +116,24 @@ function ChildCounter({ label, count, max, enabled, guestName, onChange }) {
 }
 
 function GuestCard({ guest, onChange }) {
+  const sangeetInvited = guest.sangeetInvited !== false
+  const ceremonyInvited = guest.ceremonyInvited !== false
+  const receptionInvited = guest.receptionInvited !== false
+  const invitedCount = [sangeetInvited, ceremonyInvited, receptionInvited].filter(Boolean).length
+  if (invitedCount === 0) return null
+  const gridColsClass = invitedCount === 3 ? 'md:grid-cols-3' : invitedCount === 2 ? 'md:grid-cols-2' : 'md:grid-cols-1'
+  const summary = [
+    sangeetInvited && `Sangeet: ${responseText(guest.sangeetAttending)}`,
+    ceremonyInvited && `Ceremony: ${responseText(guest.ceremonyAttending)}`,
+    receptionInvited && `Reception: ${responseText(guest.receptionAttending)}`,
+  ].filter(Boolean).join(' · ')
+  const childCounterCount = [ceremonyInvited, receptionInvited].filter(Boolean).length
   return (
     <div className="border border-gold/25 bg-white p-6 md:p-7 space-y-5">
       <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
         <div>
           <h3 className="font-serif text-2xl font-light text-ink">{guest.name}</h3>
-          <p className="font-sans text-[12px] text-ink/45 font-light">
-            Sangeet: {responseText(guest.sangeetAttending)} · Ceremony: {responseText(guest.ceremonyAttending)} · Reception: {responseText(guest.receptionAttending)}
-          </p>
+          <p className="font-sans text-[12px] text-ink/45 font-light">{summary}</p>
         </div>
         {guest.isAdditional && (
           <span className="self-start font-sans text-[10px] tracking-ultra uppercase text-gold border border-gold/30 px-3 py-2">
@@ -132,76 +142,92 @@ function GuestCard({ guest, onChange }) {
         )}
       </div>
 
-      <div className="grid gap-5 md:grid-cols-3">
-        <div>
-          <label className={labelClass}>Sangeet</label>
-          <div className="grid grid-cols-2 gap-3">
-            <AttendanceButton
-              selected={guest.sangeetAttending === true}
-              onClick={() => onChange({ ...guest, sangeetAttending: true })}
-            >
-              Yes
-            </AttendanceButton>
-            <AttendanceButton
-              selected={guest.sangeetAttending === false}
-              onClick={() => onChange({ ...guest, sangeetAttending: false })}
-            >
-              No
-            </AttendanceButton>
+      <div className={`grid gap-5 ${gridColsClass}`}>
+        {sangeetInvited && (
+          <div>
+            <label className={labelClass}>Sangeet</label>
+            <div className="grid grid-cols-2 gap-3">
+              <AttendanceButton
+                selected={guest.sangeetAttending === true}
+                onClick={() => onChange({ ...guest, sangeetAttending: true })}
+              >
+                Yes
+              </AttendanceButton>
+              <AttendanceButton
+                selected={guest.sangeetAttending === false}
+                onClick={() => onChange({ ...guest, sangeetAttending: false })}
+              >
+                No
+              </AttendanceButton>
+            </div>
           </div>
-        </div>
-        <div>
-          <label className={labelClass}>Ceremony</label>
-          <div className="grid grid-cols-2 gap-3">
-            <AttendanceButton
-              selected={guest.ceremonyAttending === true}
-              onClick={() => onChange({ ...guest, ceremonyAttending: true })}
-            >
-              Yes
-            </AttendanceButton>
-            <AttendanceButton
-              selected={guest.ceremonyAttending === false}
-              onClick={() => onChange({ ...guest, ceremonyAttending: false, ceremonyChildrenCount: 0 })}
-            >
-              No
-            </AttendanceButton>
+        )}
+        {ceremonyInvited && (
+          <div>
+            <label className={labelClass}>Ceremony</label>
+            <div className="grid grid-cols-2 gap-3">
+              <AttendanceButton
+                selected={guest.ceremonyAttending === true}
+                onClick={() => onChange({ ...guest, ceremonyAttending: true })}
+              >
+                Yes
+              </AttendanceButton>
+              <AttendanceButton
+                selected={guest.ceremonyAttending === false}
+                onClick={() => onChange({ ...guest, ceremonyAttending: false, ceremonyChildrenCount: 0 })}
+              >
+                No
+              </AttendanceButton>
+            </div>
           </div>
-        </div>
-        <div>
-          <label className={labelClass}>Reception</label>
-          <div className="grid grid-cols-2 gap-3">
-            <AttendanceButton
-              selected={guest.receptionAttending === true}
-              onClick={() => onChange({ ...guest, receptionAttending: true })}
-            >
-              Yes
-            </AttendanceButton>
-            <AttendanceButton
-              selected={guest.receptionAttending === false}
-              onClick={() => onChange({ ...guest, receptionAttending: false, receptionChildrenCount: 0 })}
-            >
-              No
-            </AttendanceButton>
+        )}
+        {receptionInvited && (
+          <div>
+            <label className={labelClass}>Reception</label>
+            <div className="grid grid-cols-2 gap-3">
+              <AttendanceButton
+                selected={guest.receptionAttending === true}
+                onClick={() => onChange({ ...guest, receptionAttending: true })}
+              >
+                Yes
+              </AttendanceButton>
+              <AttendanceButton
+                selected={guest.receptionAttending === false}
+                onClick={() => onChange({ ...guest, receptionAttending: false, receptionChildrenCount: 0 })}
+              >
+                No
+              </AttendanceButton>
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
-      {guest.childrenAllowed && (
-        <div className="pt-5 border-t border-gold/15 grid gap-5 md:grid-cols-2">
-          <ChildCounter label="Children attending Ceremony" count={guest.ceremonyChildrenCount || 0}
-            max={guest.maxChildren} enabled={guest.ceremonyAttending === true} guestName={guest.name}
-            onChange={count => onChange({ ...guest, ceremonyChildrenCount: count })} />
-          <ChildCounter label="Children attending Reception" count={guest.receptionChildrenCount || 0}
-            max={guest.maxChildren} enabled={guest.receptionAttending === true} guestName={guest.name}
-            onChange={count => onChange({ ...guest, receptionChildrenCount: count })} />
+      {guest.childrenAllowed && childCounterCount > 0 && (
+        <div className={`pt-5 border-t border-gold/15 grid gap-5 ${childCounterCount === 2 ? 'md:grid-cols-2' : 'md:grid-cols-1'}`}>
+          {ceremonyInvited && (
+            <ChildCounter label="Children attending Ceremony" count={guest.ceremonyChildrenCount || 0}
+              max={guest.maxChildren} enabled={guest.ceremonyAttending === true} guestName={guest.name}
+              onChange={count => onChange({ ...guest, ceremonyChildrenCount: count })} />
+          )}
+          {receptionInvited && (
+            <ChildCounter label="Children attending Reception" count={guest.receptionChildrenCount || 0}
+              max={guest.maxChildren} enabled={guest.receptionAttending === true} guestName={guest.name}
+              onChange={count => onChange({ ...guest, receptionChildrenCount: count })} />
+          )}
         </div>
       )}
     </div>
   )
 }
 
-function AdditionalGuestForm({ remaining, pending, setPending }) {
+function AdditionalGuestForm({ remaining, pending, setPending, sangeetInvited, ceremonyInvited, receptionInvited }) {
   const [name, setName] = useState('')
+  const fields = [
+    sangeetInvited && ['Sangeet', 'sangeetAttending'],
+    ceremonyInvited && ['Ceremony', 'ceremonyAttending'],
+    receptionInvited && ['Reception', 'receptionAttending'],
+  ].filter(Boolean)
+  const gridColsClass = fields.length === 3 ? 'md:grid-cols-3' : fields.length === 2 ? 'md:grid-cols-2' : 'md:grid-cols-1'
 
   function addGuest() {
     const trimmed = name.trim().replace(/\s+/g, ' ')
@@ -211,11 +237,15 @@ function AdditionalGuestForm({ remaining, pending, setPending }) {
       sangeetAttending: null,
       ceremonyAttending: null,
       receptionAttending: null,
+      sangeetInvited,
+      ceremonyInvited,
+      receptionInvited,
     }])
     setName('')
   }
 
   if (remaining <= 0 && pending.length === 0) return null
+  if (fields.length === 0) return null
 
   return (
     <div className="border border-gold/25 bg-white p-7 space-y-5">
@@ -242,12 +272,8 @@ function AdditionalGuestForm({ remaining, pending, setPending }) {
                 <button type="button" onClick={() => setPending(pending.filter((_, itemIndex) => itemIndex !== index))}
                   className="font-sans text-[10px] tracking-ultra uppercase text-burgundy">Remove</button>
               </div>
-              <div className="grid gap-4 md:grid-cols-3">
-                {[
-                  ['Sangeet', 'sangeetAttending'],
-                  ['Ceremony', 'ceremonyAttending'],
-                  ['Reception', 'receptionAttending'],
-                ].map(([label, field]) => (
+              <div className={`grid gap-4 ${gridColsClass}`}>
+                {fields.map(([label, field]) => (
                   <div key={field}>
                     <label className={labelClass}>{label}</label>
                     <div className="grid grid-cols-2 gap-2">
@@ -329,6 +355,24 @@ export default function RsvpPage() {
     [guests],
   )
   const remainingAdditional = Math.max(0, (group?.plusOneLimit || 0) - existingAdditional)
+  const householdSangeetInvited = useMemo(
+    () => guests.length === 0 || guests.some(guest => guest.sangeetInvited !== false),
+    [guests],
+  )
+  const householdCeremonyInvited = useMemo(
+    () => guests.length === 0 || guests.some(guest => guest.ceremonyInvited !== false),
+    [guests],
+  )
+  const householdReceptionInvited = useMemo(
+    () => guests.length === 0 || guests.some(guest => guest.receptionInvited !== false),
+    [guests],
+  )
+  const householdHasAnyInvites = useMemo(
+    () => guests.some(guest =>
+      guest.sangeetInvited !== false || guest.ceremonyInvited !== false || guest.receptionInvited !== false
+    ),
+    [guests],
+  )
 
   if (!accessCode) return <RsvpFallback />
 
@@ -336,14 +380,18 @@ export default function RsvpPage() {
     event.preventDefault()
     setError('')
     const incomplete = guests.filter(guest =>
-      !isAnswered(guest.sangeetAttending) || !isAnswered(guest.ceremonyAttending) || !isAnswered(guest.receptionAttending)
+      (guest.sangeetInvited !== false && !isAnswered(guest.sangeetAttending)) ||
+      (guest.ceremonyInvited !== false && !isAnswered(guest.ceremonyAttending)) ||
+      (guest.receptionInvited !== false && !isAnswered(guest.receptionAttending))
     )
     if (incomplete.length) {
       setError('Please respond yes or no for each guest and each event before submitting.')
       return
     }
     if (pendingAdditional.some(guest =>
-      !isAnswered(guest.sangeetAttending) || !isAnswered(guest.ceremonyAttending) || !isAnswered(guest.receptionAttending)
+      (householdSangeetInvited && !isAnswered(guest.sangeetAttending)) ||
+      (householdCeremonyInvited && !isAnswered(guest.ceremonyAttending)) ||
+      (householdReceptionInvited && !isAnswered(guest.receptionAttending))
     )) {
       setError('Please respond yes or no for each additional guest and each event before submitting.')
       return
@@ -412,6 +460,35 @@ export default function RsvpPage() {
                 </p>
               </div>
 
+              <div className="bg-burgundy text-white p-7 md:p-8 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                <div>
+                  <div className="flex items-center gap-3 mb-2">
+                    <span className="h-px w-6 bg-gold/60 flex-shrink-0" />
+                    <span className="font-sans text-[10px] tracking-extreme uppercase text-gold/80">
+                      Dress Code
+                    </span>
+                  </div>
+                  <p className="font-sans font-light text-[14px] text-white/80 leading-relaxed">
+                    Indian attire for the Sangeet, western formal for the Ceremony &amp; Reception. See colours to wear and avoid.
+                  </p>
+                </div>
+                <Link
+                  to="/dress-code"
+                  className="inline-flex items-center justify-center gap-3 font-sans text-[10px] tracking-extreme uppercase border border-gold/60 text-gold px-6 py-4 hover:bg-gold/10 transition-colors duration-300 flex-shrink-0"
+                >
+                  <span>View Dress Code</span>
+                  <span className="text-gold/60">↗</span>
+                </Link>
+              </div>
+
+              {!householdHasAnyInvites && guests.length > 0 && (
+                <div className="border border-gold/25 bg-white p-8 text-center">
+                  <p className="font-sans font-light text-[15px] text-ink/60 leading-relaxed">
+                    We could not find any events for this household on our list. Please contact us and we will help.
+                  </p>
+                </div>
+              )}
+
               {guests.map(guest => (
                 <GuestCard
                   key={guest.id}
@@ -426,6 +503,9 @@ export default function RsvpPage() {
                 remaining={remainingAdditional}
                 pending={pendingAdditional}
                 setPending={setPendingAdditional}
+                sangeetInvited={householdSangeetInvited}
+                ceremonyInvited={householdCeremonyInvited}
+                receptionInvited={householdReceptionInvited}
               />
 
               <div className="border border-gold/25 bg-white p-7 space-y-6">

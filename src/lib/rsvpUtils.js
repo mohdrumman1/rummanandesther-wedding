@@ -19,7 +19,9 @@ export function groupStatus(group) {
   const guests = group.guests || []
   if (!guests.length) return 'empty'
   const allAnswered = guests.every(guest =>
-    isAnswered(guest.sangeetAttending) && isAnswered(guest.ceremonyAttending) && isAnswered(guest.receptionAttending)
+    (guest.sangeetInvited === false || isAnswered(guest.sangeetAttending)) &&
+    (guest.ceremonyInvited === false || isAnswered(guest.ceremonyAttending)) &&
+    (guest.receptionInvited === false || isAnswered(guest.receptionAttending))
   )
   if (allAnswered) return 'complete'
   const someAnswered = guests.some(guest =>
@@ -82,5 +84,8 @@ export function blankGuest() {
     sangeetAttending: null,
     ceremonyAttending: null,
     receptionAttending: null,
+    sangeetInvited: true,
+    ceremonyInvited: true,
+    receptionInvited: true,
   }
 }
