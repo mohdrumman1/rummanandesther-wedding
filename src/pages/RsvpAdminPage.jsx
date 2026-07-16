@@ -41,6 +41,8 @@ function statusClass(status) {
   return 'border-burgundy/20 text-burgundy bg-burgundy/5'
 }
 
+const pluralizeGuests = count => `${count} guest${count === 1 ? '' : 's'}`
+
 function LoginPanel({ onLogin }) {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
@@ -316,7 +318,7 @@ function GroupForm({ activeGroup, onSave, onCancel }) {
           />
         </div>
         <div>
-          <label className={labelClass}>Plus-one limit</label>
+          <label className={labelClass}>Additional guest spots</label>
           <input
             type="number"
             min="0"
@@ -430,6 +432,9 @@ function GroupTable({ groups, filter, onEdit, onDelete, readOnly }) {
               const ceremonyYes = group.summary?.ceremonyYes ?? group.guests.filter(guest => guest.ceremonyAttending === true).length
               const receptionYes = group.summary?.receptionYes ?? group.guests.filter(guest => guest.receptionAttending === true).length
               const inviteLink = readOnly ? '' : buildInviteLink(group.accessCode)
+              const namedGuestCount = group.guests.length
+              const additionalSpots = Number(group.plusOneLimit || 0)
+              const totalGuestCapacity = namedGuestCount + additionalSpots
               return (
                 <tr key={group.id} className="border-b border-gold/10 align-top">
                   <td className="px-4 py-5">
@@ -442,7 +447,12 @@ function GroupTable({ groups, filter, onEdit, onDelete, readOnly }) {
                     </span>
                   </td>
                   <td className="px-4 py-5 font-sans text-[13px] text-ink/60">
-                    <p>{group.guests.length} guest{group.guests.length === 1 ? '' : 's'}</p>
+                    <p>{pluralizeGuests(totalGuestCapacity)}</p>
+                    {additionalSpots > 0 && (
+                      <p className="mt-1 text-[12px] text-ink/40">
+                        {pluralizeGuests(namedGuestCount)} named + {additionalSpots} additional spot{additionalSpots === 1 ? '' : 's'}
+                      </p>
+                    )}
                     <p className="mt-2 max-w-[220px] text-ink/45">
                       {group.guests.map(guest => guest.name).join(', ')}
                     </p>
