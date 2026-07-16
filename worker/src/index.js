@@ -848,12 +848,44 @@ function csvEscape(value) {
 
 async function handleAdminExport(env) {
   const groups = await listGroups(env);
-  const rows = [['household', 'guest', 'sangeet_invited', 'ceremony_invited', 'reception_invited', 'sangeet', 'ceremony', 'reception', 'ceremony_children', 'reception_children', 'dietary', 'message', 'submitted_at', 'invite_link']];
+  const rows = [[
+    'household',
+    'guest',
+    'seat_type',
+    'total_guest_capacity',
+    'named_guest_count',
+    'additional_guest_spots',
+    'submitted_additional_guests',
+    'remaining_additional_spots',
+    'sangeet_invited',
+    'ceremony_invited',
+    'reception_invited',
+    'sangeet',
+    'ceremony',
+    'reception',
+    'ceremony_children',
+    'reception_children',
+    'dietary',
+    'message',
+    'submitted_at',
+    'invite_link',
+  ]];
   groups.forEach(group => {
+    const namedGuestCount = group.guests.filter(guest => !guest.isAdditional).length;
+    const additionalGuestSpots = Math.max(0, Number(group.plusOneLimit || 0));
+    const submittedAdditionalGuests = group.guests.filter(guest => guest.isAdditional).length;
+    const remainingAdditionalSpots = Math.max(0, additionalGuestSpots - submittedAdditionalGuests);
+    const totalGuestCapacity = namedGuestCount + additionalGuestSpots;
     group.guests.forEach(guest => {
       rows.push([
         group.householdName,
         guest.name,
+        guest.isAdditional ? 'additional_submitted' : 'named',
+        totalGuestCapacity,
+        namedGuestCount,
+        additionalGuestSpots,
+        submittedAdditionalGuests,
+        remainingAdditionalSpots,
         guest.sangeetInvited ? 'yes' : 'no',
         guest.ceremonyInvited ? 'yes' : 'no',
         guest.receptionInvited ? 'yes' : 'no',
@@ -868,6 +900,30 @@ async function handleAdminExport(env) {
         `/rsvp/${group.accessCode}`,
       ]);
     });
+    for (let index = 0; index < remainingAdditionalSpots; index += 1) {
+      rows.push([
+        group.householdName,
+        `Additional guest spot ${index + 1}`,
+        'additional_available',
+        totalGuestCapacity,
+        namedGuestCount,
+        additionalGuestSpots,
+        submittedAdditionalGuests,
+        remainingAdditionalSpots,
+        '',
+        '',
+        '',
+        'pending',
+        'pending',
+        'pending',
+        0,
+        0,
+        group.rsvp.dietaryRequirements,
+        group.rsvp.message,
+        group.rsvp.submittedAt || '',
+        `/rsvp/${group.accessCode}`,
+      ]);
+    }
   });
   return new Response(rows.map(row => row.map(csvEscape).join(',')).join('\n'), {
     headers: {

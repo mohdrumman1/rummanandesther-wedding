@@ -432,9 +432,11 @@ function GroupTable({ groups, filter, onEdit, onDelete, readOnly }) {
               const ceremonyYes = group.summary?.ceremonyYes ?? group.guests.filter(guest => guest.ceremonyAttending === true).length
               const receptionYes = group.summary?.receptionYes ?? group.guests.filter(guest => guest.receptionAttending === true).length
               const inviteLink = readOnly ? '' : buildInviteLink(group.accessCode)
-              const namedGuestCount = group.guests.length
+              const namedGuestCount = group.guests.filter(guest => !guest.isAdditional).length
+              const submittedAdditionalGuests = group.guests.filter(guest => guest.isAdditional).length
               const additionalSpots = Number(group.plusOneLimit || 0)
               const totalGuestCapacity = namedGuestCount + additionalSpots
+              const remainingAdditionalSpots = Math.max(0, additionalSpots - submittedAdditionalGuests)
               return (
                 <tr key={group.id} className="border-b border-gold/10 align-top">
                   <td className="px-4 py-5">
@@ -451,6 +453,11 @@ function GroupTable({ groups, filter, onEdit, onDelete, readOnly }) {
                     {additionalSpots > 0 && (
                       <p className="mt-1 text-[12px] text-ink/40">
                         {pluralizeGuests(namedGuestCount)} named + {additionalSpots} additional spot{additionalSpots === 1 ? '' : 's'}
+                      </p>
+                    )}
+                    {submittedAdditionalGuests > 0 && (
+                      <p className="mt-1 text-[12px] text-ink/40">
+                        {submittedAdditionalGuests} additional submitted, {remainingAdditionalSpots} open
                       </p>
                     )}
                     <p className="mt-2 max-w-[220px] text-ink/45">
@@ -593,6 +600,9 @@ export default function RsvpAdminPage() {
             <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
               {[
                 ['Households', counts.households],
+                ['Seat Capacity', counts.totalGuestCapacity],
+                ['Named Guests', counts.namedGuests],
+                ['Add. Spots', counts.additionalSpots],
                 ['Complete', counts.completeHouseholds],
                 ['Pending', counts.pendingHouseholds],
                 ['Sangeet Yes', counts.sangeetYes],

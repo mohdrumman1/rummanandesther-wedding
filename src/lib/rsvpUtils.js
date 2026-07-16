@@ -33,6 +33,10 @@ export function groupStatus(group) {
 export function rsvpCounts(groups) {
   const initial = {
     households: groups.length,
+    totalGuestCapacity: 0,
+    namedGuests: 0,
+    additionalSpots: 0,
+    submittedAdditionalGuests: 0,
     pendingHouseholds: 0,
     completeHouseholds: 0,
     sangeetYes: 0,
@@ -46,6 +50,14 @@ export function rsvpCounts(groups) {
 
   return groups.reduce((counts, group) => {
     const status = groupStatus(group)
+    const guests = group.guests || []
+    const namedGuestCount = guests.filter(guest => !guest.isAdditional).length
+    const submittedAdditionalGuests = guests.filter(guest => guest.isAdditional).length
+    const additionalSpots = Number(group.plusOneLimit || 0)
+    counts.namedGuests += namedGuestCount
+    counts.additionalSpots += additionalSpots
+    counts.submittedAdditionalGuests += submittedAdditionalGuests
+    counts.totalGuestCapacity += namedGuestCount + additionalSpots
     if (status === 'complete') counts.completeHouseholds += 1
     if (status === 'pending' || status === 'partial') counts.pendingHouseholds += 1
     if (group.summary) {
