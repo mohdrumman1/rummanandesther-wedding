@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { motion } from 'framer-motion'
+import { motion, useReducedMotion, useScroll, useTransform } from 'framer-motion'
 import PageHeader from '../components/PageHeader'
 import { fetchRsvp, submitRsvp } from '../lib/rsvpApi'
 import { isAnswered, responseText } from '../lib/rsvpUtils'
@@ -15,6 +15,165 @@ const inputClass =
   'w-full bg-white border border-gold/25 text-ink font-sans text-[14px] font-light px-5 py-4 focus:outline-none focus:border-gold transition-colors duration-200 placeholder:text-ink/30'
 
 const labelClass = 'block font-sans text-[10px] tracking-extreme uppercase text-ink/50 mb-2'
+
+const inviteEase = [0.22, 1, 0.36, 1]
+
+const inviteItem = {
+  hidden: { opacity: 0, y: 26 },
+  visible: index => ({
+    opacity: 1,
+    y: 0,
+    transition: { delay: 0.24 + index * 0.14, duration: 0.9, ease: inviteEase },
+  }),
+}
+
+function InviteMotif({ className = '' }) {
+  return (
+    <div className={`pointer-events-none absolute ${className}`} aria-hidden="true">
+      <div className="relative h-full w-full">
+        <div className="absolute inset-0 rounded-full border border-gold/20" />
+        <div className="absolute inset-[10%] rounded-full border border-gold/15" />
+        <div className="absolute left-1/2 top-1/2 h-[72%] w-px -translate-x-1/2 -translate-y-1/2 bg-gold/15" />
+        <div className="absolute left-1/2 top-1/2 h-px w-[72%] -translate-x-1/2 -translate-y-1/2 bg-gold/15" />
+        <div className="absolute left-1/2 top-1/2 h-[52%] w-[52%] -translate-x-1/2 -translate-y-1/2 rotate-45 border border-gold/15" />
+        <div className="absolute left-1/2 top-1/2 h-[30%] w-[30%] -translate-x-1/2 -translate-y-1/2 rounded-full bg-gold/10" />
+      </div>
+    </div>
+  )
+}
+
+function InvitationHero({ group, status, onOpenRsvp }) {
+  const shouldReduceMotion = useReducedMotion()
+  const { scrollY } = useScroll()
+  const cardY = useTransform(scrollY, [0, 900], ['0%', shouldReduceMotion ? '0%' : '10%'])
+  const ornamentsY = useTransform(scrollY, [0, 900], ['0%', shouldReduceMotion ? '0%' : '-8%'])
+  const cardScale = useTransform(scrollY, [0, 900], [1, shouldReduceMotion ? 1 : 0.985])
+
+  return (
+    <section
+      className="relative min-h-[100svh] overflow-hidden bg-burgundy-dark text-white"
+      aria-label="Wedding invitation"
+    >
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_18%,rgba(201,169,110,0.24)_0,rgba(114,47,55,0.52)_34%,rgba(74,30,36,0.96)_76%)]" />
+      <div
+        className="absolute inset-0 opacity-[0.09]"
+        style={{
+          backgroundImage: 'repeating-linear-gradient(135deg, #FAF6F0 0, #FAF6F0 1px, transparent 1px, transparent 18px)',
+        }}
+      />
+
+      <motion.div style={{ y: ornamentsY }} className="absolute inset-0">
+        <InviteMotif className="-left-24 top-24 h-80 w-80 md:h-[30rem] md:w-[30rem]" />
+        <InviteMotif className="-right-24 bottom-16 h-72 w-72 rotate-12 md:h-[28rem] md:w-[28rem]" />
+        <div className="absolute left-8 top-32 hidden h-[62vh] w-px bg-gradient-to-b from-transparent via-gold/40 to-transparent md:block" />
+        <div className="absolute right-8 top-32 hidden h-[62vh] w-px bg-gradient-to-b from-transparent via-gold/40 to-transparent md:block" />
+      </motion.div>
+
+      <div className="relative z-10 flex min-h-[100svh] items-center justify-center px-5 py-28 sm:px-8 lg:px-12">
+        <motion.div
+          className="relative w-full max-w-3xl text-center"
+          style={{ y: cardY, scale: cardScale }}
+          initial={shouldReduceMotion ? false : 'hidden'}
+          animate="visible"
+        >
+          <motion.div
+            className="absolute -inset-4 border border-gold/35 sm:-inset-6"
+            initial={shouldReduceMotion ? false : { clipPath: 'inset(50% 50% 50% 50%)', opacity: 0 }}
+            animate={{ clipPath: 'inset(0% 0% 0% 0%)', opacity: 1 }}
+            transition={{ duration: 1.25, ease: inviteEase }}
+            aria-hidden="true"
+          />
+          <div className="relative overflow-hidden border border-gold/55 bg-cream px-6 py-12 text-ink shadow-2xl shadow-ink/40 sm:px-10 md:px-16 md:py-14">
+            <div
+              className="absolute inset-0 opacity-[0.06]"
+              style={{
+                backgroundImage: 'radial-gradient(circle at 1px 1px, #722F37 1px, transparent 0)',
+                backgroundSize: '18px 18px',
+              }}
+              aria-hidden="true"
+            />
+            <div className="absolute inset-3 border border-gold/35 pointer-events-none" aria-hidden="true" />
+            <div className="absolute left-1/2 top-5 h-12 w-px -translate-x-1/2 bg-gradient-to-b from-gold/60 to-transparent" aria-hidden="true" />
+            <div className="absolute bottom-5 left-1/2 h-12 w-px -translate-x-1/2 bg-gradient-to-t from-gold/60 to-transparent" aria-hidden="true" />
+            <div className="relative">
+            <motion.div custom={0} variants={inviteItem}>
+              <div className="mx-auto mb-8 flex items-center justify-center gap-4">
+                <span className="h-px w-10 bg-gold/70 sm:w-16" />
+                <span className="font-sans text-[10px] tracking-extreme uppercase text-gold-dark">
+                  You are invited
+                </span>
+                <span className="h-px w-10 bg-gold/70 sm:w-16" />
+              </div>
+            </motion.div>
+
+            <motion.p
+              custom={1}
+              variants={inviteItem}
+              className="font-sans text-[10px] tracking-extreme uppercase text-ink/55"
+            >
+              To the wedding of
+            </motion.p>
+            <motion.h1
+              custom={2}
+              variants={inviteItem}
+              className="mt-5 font-serif text-5xl font-light leading-none text-burgundy sm:text-7xl md:text-8xl"
+            >
+              Rumman
+              <span className="block py-1 font-script text-5xl text-gold-dark sm:text-6xl md:text-7xl">&amp;</span>
+              Esther
+            </motion.h1>
+
+            <motion.div custom={3} variants={inviteItem} className="mt-9">
+              <p className="font-sans text-[11px] tracking-ultra uppercase text-ink/70">
+                Saturday, 12 December 2026
+              </p>
+              <p className="mt-3 font-serif text-2xl font-light text-ink">
+                Hunter Valley, New South Wales
+              </p>
+            </motion.div>
+
+            <motion.div custom={4} variants={inviteItem} className="mx-auto mt-10 max-w-xl">
+              <p className="font-sans text-[15px] font-light leading-relaxed text-ink/75">
+                {group
+                  ? `Dear ${group.householdName}, we would be honoured to celebrate this weekend with you.`
+                  : status === 'loading'
+                    ? 'Your personal invitation is opening now.'
+                    : 'We would be honoured to celebrate this weekend with you.'}
+              </p>
+            </motion.div>
+
+            <motion.div custom={5} variants={inviteItem} className="mt-11">
+              <button
+                type="button"
+                onClick={onOpenRsvp}
+                className="group inline-flex min-h-12 items-center justify-center gap-4 border border-burgundy/35 bg-burgundy px-8 py-4 font-sans text-[10px] tracking-extreme uppercase text-white transition-all duration-300 hover:border-gold hover:bg-burgundy-dark focus:outline-none focus:ring-2 focus:ring-gold focus:ring-offset-4 focus:ring-offset-cream"
+              >
+                <span>Open RSVP</span>
+                <span className="text-gold transition-transform duration-300 group-hover:translate-y-1">↓</span>
+              </button>
+            </motion.div>
+            </div>
+          </div>
+        </motion.div>
+      </div>
+
+      <motion.div
+        className="absolute bottom-6 left-1/2 z-10 flex -translate-x-1/2 flex-col items-center gap-2 text-white/55"
+        initial={shouldReduceMotion ? false : { opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 1.6, duration: 0.6 }}
+        aria-hidden="true"
+      >
+        <span className="font-sans text-[9px] tracking-extreme uppercase">Scroll</span>
+        <motion.span
+          className="h-10 w-px origin-top bg-gradient-to-b from-gold/70 to-transparent"
+          animate={shouldReduceMotion ? undefined : { scaleY: [1, 0.35, 1] }}
+          transition={{ repeat: Infinity, duration: 2.2, ease: 'easeInOut' }}
+        />
+      </motion.div>
+    </section>
+  )
+}
 
 function RsvpFallback() {
   return (
@@ -322,6 +481,7 @@ function AdditionalGuestForm({ remaining, pending, setPending, sangeetInvited, c
 
 export default function RsvpPage() {
   const { accessCode } = useParams()
+  const rsvpRef = useRef(null)
   const [group, setGroup] = useState(null)
   const [guests, setGuests] = useState([])
   const [dietaryRequirements, setDietaryRequirements] = useState('')
@@ -374,6 +534,10 @@ export default function RsvpPage() {
     [guests],
   )
 
+  function openRsvp() {
+    rsvpRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
+
   if (!accessCode) return <RsvpFallback />
 
   async function handleSubmit(event) {
@@ -419,48 +583,58 @@ export default function RsvpPage() {
 
   return (
     <motion.div variants={pageVariants} initial="initial" animate="animate" exit="exit">
-      <PageHeader
-        title="RSVP"
-        subtitle={group ? `For ${group.householdName}` : 'Opening your personal RSVP'}
-      />
+      <InvitationHero group={group} status={status} onOpenRsvp={openRsvp} />
 
-      {status === 'loading' && <LoadingState />}
-      {status === 'error' && <ErrorState message={error} />}
+      <div ref={rsvpRef} className="scroll-mt-24">
+        {status === 'loading' && <LoadingState />}
+        {status === 'error' && <ErrorState message={error} />}
 
-      {(status === 'ready' || status === 'saving' || status === 'submitted') && group && (
-        <section className="py-20 md:py-24 px-6 sm:px-8 lg:px-12 xl:px-16 bg-cream">
-          <div className="max-w-3xl mx-auto">
-            {status === 'submitted' && (
+        {(status === 'ready' || status === 'saving' || status === 'submitted') && group && (
+          <section className="py-20 md:py-24 px-6 sm:px-8 lg:px-12 xl:px-16 bg-cream">
+            <div className="max-w-3xl mx-auto">
+              {status === 'submitted' && (
+                <motion.div
+                  className="mb-10 border border-gold/30 bg-white px-6 py-7 text-center"
+                  initial={{ opacity: 0, scale: 0.97 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                >
+                  <span className="text-gold text-3xl block mb-4">◆</span>
+                  <h2 className="font-serif text-3xl font-light text-ink mb-2">Thank you</h2>
+                  <p className="font-sans text-[14px] font-light text-ink/60 leading-relaxed">
+                    Your RSVP has been saved. You can return to this same link to make changes before August 15, 2026.
+                  </p>
+                </motion.div>
+              )}
+
+              <form onSubmit={handleSubmit} className="space-y-7">
+                <motion.div
+                  className="border border-gold/25 bg-white p-8"
+                  initial={{ opacity: 0, y: 28 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, margin: '-80px' }}
+                  transition={{ duration: 0.7, ease: 'easeOut' }}
+                >
+                  <div className="flex items-center gap-3 mb-4">
+                    <span className="h-px w-8 bg-gold flex-shrink-0" />
+                    <span className="font-sans text-[10px] tracking-extreme uppercase text-gold">
+                      Personal RSVP
+                    </span>
+                  </div>
+                  <h2 className="font-serif text-4xl md:text-5xl font-light text-ink mb-4">
+                    {group.householdName}
+                  </h2>
+                  <p className="font-sans font-light text-[15px] text-ink/60 leading-relaxed">
+                    Please respond for each person listed below. If plans change, you can return to this link and update your RSVP.
+                  </p>
+                </motion.div>
+
               <motion.div
-                className="mb-10 border border-gold/30 bg-white px-6 py-7 text-center"
-                initial={{ opacity: 0, scale: 0.97 }}
-                animate={{ opacity: 1, scale: 1 }}
+                className="bg-burgundy text-white p-7 md:p-8 flex flex-col gap-4 md:flex-row md:items-center md:justify-between"
+                initial={{ opacity: 0, y: 28 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: '-80px' }}
+                transition={{ duration: 0.7, ease: 'easeOut', delay: 0.08 }}
               >
-                <span className="text-gold text-3xl block mb-4">◆</span>
-                <h2 className="font-serif text-3xl font-light text-ink mb-2">Thank you</h2>
-                <p className="font-sans text-[14px] font-light text-ink/60 leading-relaxed">
-                  Your RSVP has been saved. You can return to this same link to make changes before August 15, 2026.
-                </p>
-              </motion.div>
-            )}
-
-            <form onSubmit={handleSubmit} className="space-y-7">
-              <div className="border border-gold/25 bg-white p-8">
-                <div className="flex items-center gap-3 mb-4">
-                  <span className="h-px w-8 bg-gold flex-shrink-0" />
-                  <span className="font-sans text-[10px] tracking-extreme uppercase text-gold">
-                    Personal RSVP
-                  </span>
-                </div>
-                <h2 className="font-serif text-4xl md:text-5xl font-light text-ink mb-4">
-                  {group.householdName}
-                </h2>
-                <p className="font-sans font-light text-[15px] text-ink/60 leading-relaxed">
-                  Please respond for each person listed below. If plans change, you can return to this link and update your RSVP.
-                </p>
-              </div>
-
-              <div className="bg-burgundy text-white p-7 md:p-8 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                 <div>
                   <div className="flex items-center gap-3 mb-2">
                     <span className="h-px w-6 bg-gold/60 flex-shrink-0" />
@@ -479,7 +653,7 @@ export default function RsvpPage() {
                   <span>View Dress Code</span>
                   <span className="text-gold/60">↗</span>
                 </Link>
-              </div>
+              </motion.div>
 
               {!householdHasAnyInvites && guests.length > 0 && (
                 <div className="border border-gold/25 bg-white p-8 text-center">
@@ -545,10 +719,11 @@ export default function RsvpPage() {
               >
                 {status === 'saving' ? 'Saving...' : 'Save RSVP'}
               </button>
-            </form>
-          </div>
-        </section>
-      )}
+              </form>
+            </div>
+          </section>
+        )}
+      </div>
     </motion.div>
   )
 }
