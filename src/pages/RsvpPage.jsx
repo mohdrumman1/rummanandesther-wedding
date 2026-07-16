@@ -18,6 +18,8 @@ const labelClass = 'block font-sans text-[10px] tracking-extreme uppercase text-
 
 const inviteEase = [0.22, 1, 0.36, 1]
 
+const pluralizeGuests = count => `${count} guest${count === 1 ? '' : 's'}`
+
 const inviteItem = {
   hidden: { opacity: 0, y: 26 },
   visible: index => ({
@@ -479,6 +481,46 @@ function AdditionalGuestForm({ remaining, pending, setPending, sangeetInvited, c
   )
 }
 
+function SeatSummary({ guests, plusOneLimit, pendingAdditional }) {
+  const namedGuestCount = guests.filter(guest => !guest.isAdditional).length
+  const submittedAdditionalGuests = guests.filter(guest => guest.isAdditional).length
+  const additionalSpots = Number(plusOneLimit || 0)
+  const pendingAdditionalGuests = pendingAdditional.length
+  const totalGuestCapacity = namedGuestCount + additionalSpots
+  const remainingAdditionalSpots = Math.max(0, additionalSpots - submittedAdditionalGuests - pendingAdditionalGuests)
+
+  return (
+    <div className="border border-gold/25 bg-white p-7 md:p-8">
+      <div className="flex items-center gap-3 mb-5">
+        <span className="h-px w-8 bg-gold flex-shrink-0" />
+        <span className="font-sans text-[10px] tracking-extreme uppercase text-gold">
+          Seat Count
+        </span>
+      </div>
+      <div className="grid gap-4 sm:grid-cols-3">
+        <div className="border border-gold/20 bg-cream px-5 py-4">
+          <p className="font-sans text-[10px] tracking-ultra uppercase text-ink/40">Total seats</p>
+          <p className="mt-2 font-serif text-4xl font-light text-burgundy">{totalGuestCapacity}</p>
+        </div>
+        <div className="border border-gold/20 bg-cream px-5 py-4">
+          <p className="font-sans text-[10px] tracking-ultra uppercase text-ink/40">Named guests</p>
+          <p className="mt-2 font-serif text-4xl font-light text-ink">{namedGuestCount}</p>
+        </div>
+        <div className="border border-gold/20 bg-cream px-5 py-4">
+          <p className="font-sans text-[10px] tracking-ultra uppercase text-ink/40">Additional spots</p>
+          <p className="mt-2 font-serif text-4xl font-light text-ink">{additionalSpots}</p>
+        </div>
+      </div>
+      <p className="mt-5 font-sans text-[13px] font-light leading-relaxed text-ink/55">
+        This invitation covers {pluralizeGuests(totalGuestCapacity)}:
+        {' '}{pluralizeGuests(namedGuestCount)} named
+        {additionalSpots > 0 ? ` + ${additionalSpots} additional spot${additionalSpots === 1 ? '' : 's'}.` : '.'}
+        {additionalSpots > 0 && ` ${remainingAdditionalSpots} additional spot${remainingAdditionalSpots === 1 ? '' : 's'} still open on this RSVP.`}
+      </p>
+    </div>
+  )
+}
+
 export default function RsvpPage() {
   const { accessCode } = useParams()
   const rsvpRef = useRef(null)
@@ -662,6 +704,12 @@ export default function RsvpPage() {
                   </p>
                 </div>
               )}
+
+              <SeatSummary
+                guests={guests}
+                plusOneLimit={group.plusOneLimit}
+                pendingAdditional={pendingAdditional}
+              />
 
               {guests.map(guest => (
                 <GuestCard

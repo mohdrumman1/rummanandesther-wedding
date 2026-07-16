@@ -408,7 +408,7 @@ function copyInviteMessage(group, inviteLink) {
 
 function GroupTable({ groups, filter, onEdit, onDelete, readOnly }) {
   const filtered = groups.filter(group => filter === 'all' || groupStatus(group) === filter)
-  const headings = ['Household', 'Status', 'Family Members', 'Sangeet', 'Ceremony', 'Reception']
+  const headings = ['Household', 'Status', 'Seats', 'Sangeet', 'Ceremony', 'Reception']
   if (!readOnly) headings.push('Invite Link')
   if (!readOnly) headings.push('Actions')
 
