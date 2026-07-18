@@ -20,6 +20,25 @@ const inviteEase = [0.22, 1, 0.36, 1]
 
 const pluralizeGuests = count => `${count} guest${count === 1 ? '' : 's'}`
 
+function dressCodeLink({ sangeetInvited, ceremonyInvited, receptionInvited }) {
+  const events = [
+    sangeetInvited && 'sangeet',
+    (ceremonyInvited || receptionInvited) && 'wedding',
+  ].filter(Boolean)
+  return events.length ? `/dress-code?events=${events.join(',')}` : '/dress-code'
+}
+
+function dressCodeSummary({ sangeetInvited, ceremonyInvited, receptionInvited }) {
+  const weddingInvited = ceremonyInvited || receptionInvited
+  if (sangeetInvited && weddingInvited) {
+    return 'Indian attire for the Sangeet, western formal for the Ceremony & Reception. See colours to wear and avoid.'
+  }
+  if (sangeetInvited) {
+    return 'Indian attire for the Sangeet. See colours to wear and avoid.'
+  }
+  return 'Western formal for the Ceremony & Reception. See colours to wear and avoid.'
+}
+
 const inviteItem = {
   hidden: { opacity: 0, y: 26 },
   visible: index => ({
@@ -558,15 +577,15 @@ export default function RsvpPage() {
   )
   const remainingAdditional = Math.max(0, (group?.plusOneLimit || 0) - existingAdditional)
   const householdSangeetInvited = useMemo(
-    () => guests.length === 0 || guests.some(guest => guest.sangeetInvited !== false),
+    () => guests.some(guest => guest.sangeetInvited !== false),
     [guests],
   )
   const householdCeremonyInvited = useMemo(
-    () => guests.length === 0 || guests.some(guest => guest.ceremonyInvited !== false),
+    () => guests.some(guest => guest.ceremonyInvited !== false),
     [guests],
   )
   const householdReceptionInvited = useMemo(
-    () => guests.length === 0 || guests.some(guest => guest.receptionInvited !== false),
+    () => guests.some(guest => guest.receptionInvited !== false),
     [guests],
   )
   const householdHasAnyInvites = useMemo(
@@ -575,6 +594,12 @@ export default function RsvpPage() {
     ),
     [guests],
   )
+  const dressCodeContext = {
+    sangeetInvited: householdSangeetInvited,
+    ceremonyInvited: householdCeremonyInvited,
+    receptionInvited: householdReceptionInvited,
+  }
+  const showDressCode = householdSangeetInvited || householdCeremonyInvited || householdReceptionInvited
 
   function openRsvp() {
     rsvpRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
@@ -670,32 +695,34 @@ export default function RsvpPage() {
                   </p>
                 </motion.div>
 
-              <motion.div
-                className="bg-burgundy text-white p-7 md:p-8 flex flex-col gap-4 md:flex-row md:items-center md:justify-between"
-                initial={{ opacity: 0, y: 28 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, margin: '-80px' }}
-                transition={{ duration: 0.7, ease: 'easeOut', delay: 0.08 }}
-              >
-                <div>
-                  <div className="flex items-center gap-3 mb-2">
-                    <span className="h-px w-6 bg-gold/60 flex-shrink-0" />
-                    <span className="font-sans text-[10px] tracking-extreme uppercase text-gold/80">
-                      Dress Code
-                    </span>
-                  </div>
-                  <p className="font-sans font-light text-[14px] text-white/80 leading-relaxed">
-                    Indian attire for the Sangeet, western formal for the Ceremony &amp; Reception. See colours to wear and avoid.
-                  </p>
-                </div>
-                <Link
-                  to="/dress-code"
-                  className="inline-flex items-center justify-center gap-3 font-sans text-[10px] tracking-extreme uppercase border border-gold/60 text-gold px-6 py-4 hover:bg-gold/10 transition-colors duration-300 flex-shrink-0"
+              {showDressCode && (
+                <motion.div
+                  className="bg-burgundy text-white p-7 md:p-8 flex flex-col gap-4 md:flex-row md:items-center md:justify-between"
+                  initial={{ opacity: 0, y: 28 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, margin: '-80px' }}
+                  transition={{ duration: 0.7, ease: 'easeOut', delay: 0.08 }}
                 >
-                  <span>View Dress Code</span>
-                  <span className="text-gold/60">↗</span>
-                </Link>
-              </motion.div>
+                  <div>
+                    <div className="flex items-center gap-3 mb-2">
+                      <span className="h-px w-6 bg-gold/60 flex-shrink-0" />
+                      <span className="font-sans text-[10px] tracking-extreme uppercase text-gold/80">
+                        Dress Code
+                      </span>
+                    </div>
+                    <p className="font-sans font-light text-[14px] text-white/80 leading-relaxed">
+                      {dressCodeSummary(dressCodeContext)}
+                    </p>
+                  </div>
+                  <Link
+                    to={dressCodeLink(dressCodeContext)}
+                    className="inline-flex items-center justify-center gap-3 font-sans text-[10px] tracking-extreme uppercase border border-gold/60 text-gold px-6 py-4 hover:bg-gold/10 transition-colors duration-300 flex-shrink-0"
+                  >
+                    <span>View Dress Code</span>
+                    <span className="text-gold/60">↗</span>
+                  </Link>
+                </motion.div>
+              )}
 
               {!householdHasAnyInvites && guests.length > 0 && (
                 <div className="border border-gold/25 bg-white p-8 text-center">

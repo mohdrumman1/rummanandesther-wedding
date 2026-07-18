@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import PageHeader from '../components/PageHeader'
 
@@ -90,19 +91,32 @@ function ClickableImage({ src, alt, className, onOpen }) {
 
 export default function DressCodePage() {
   const [lightbox, setLightbox] = useState(null)
+  const [searchParams] = useSearchParams()
   const openLightbox = (src, alt) => setLightbox({ src, alt })
   const closeLightbox = () => setLightbox(null)
+  const requestedEvents = searchParams.get('events')
+    ?.split(',')
+    .map(event => event.trim().toLowerCase())
+    .filter(event => ['sangeet', 'wedding'].includes(event)) || []
+  const showSangeet = requestedEvents.includes('sangeet')
+  const showWedding = requestedEvents.length === 0 || requestedEvents.includes('wedding')
+  const subtitle = showSangeet && showWedding
+    ? "Two events, two looks. Let's make it memorable."
+    : showSangeet
+      ? "Sangeet attire, colours, and inspiration."
+      : "Wedding and reception attire, colours, and inspiration."
 
   return (
     <>
     {lightbox && <Lightbox src={lightbox.src} alt={lightbox.alt} onClose={closeLightbox} />}
     <motion.div variants={pageVariants} initial="initial" animate="animate" exit="exit">
-      <PageHeader title="Dress Code" subtitle="Two events, two looks. Let's make it memorable." />
+      <PageHeader title="Dress Code" subtitle={subtitle} />
 
       <section className="py-24 px-6 bg-cream">
         <div className="max-w-4xl mx-auto space-y-6">
 
           {/* ─── SANGEET ─── */}
+          {showSangeet && (
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -167,8 +181,10 @@ export default function DressCodePage() {
               </div>
             </div>
           </motion.div>
+          )}
 
           {/* ─── WEDDING & RECEPTION ─── */}
+          {showWedding && (
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -279,6 +295,7 @@ export default function DressCodePage() {
               </div>
             </div>
           </motion.div>
+          )}
 
           {/* Bottom note */}
           <motion.div
