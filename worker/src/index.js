@@ -103,6 +103,7 @@ function groupRow(row, guests = [], notes = null) {
     householdName: row.household_name,
     accessCode: row.access_code,
     plusOneLimit: row.plus_one_limit,
+    mostLikelyNotComing: row.most_likely_not_coming === 1,
     notes: row.notes || '',
     guests: guests.map(guestRow),
     rsvp: {
@@ -644,6 +645,7 @@ function readOnlyGroup(group) {
   return {
     id: group.id,
     householdName: group.householdName,
+    mostLikelyNotComing: group.mostLikelyNotComing,
     summary: groupSummary(group),
     guests: group.guests.filter(guest => !guest.isAdditional).map(guest => ({
       name: guest.name,
@@ -668,9 +670,16 @@ async function handleAdminGroupCreate(request, env) {
   const groupId = randomId('grp_');
   const accessCode = body.accessCode ? normalizeName(body.accessCode).toUpperCase() : randomAccessCode();
   await env.DB.prepare(`
-    INSERT INTO guest_groups (id, household_name, access_code, plus_one_limit, notes)
-    VALUES (?, ?, ?, ?, ?)
-  `).bind(groupId, householdName, accessCode, Math.max(0, Number(body.plusOneLimit || 0)), String(body.notes || '').trim()).run();
+    INSERT INTO guest_groups (id, household_name, access_code, plus_one_limit, most_likely_not_coming, notes)
+    VALUES (?, ?, ?, ?, ?, ?)
+  `).bind(
+    groupId,
+    householdName,
+    accessCode,
+    Math.max(0, Number(body.plusOneLimit || 0)),
+    body.mostLikelyNotComing ? 1 : 0,
+    String(body.notes || '').trim(),
+  ).run();
 
   const guests = Array.isArray(body.guests) ? body.guests : [];
   const statements = guests.map((guest, index) => env.DB.prepare(`
@@ -742,9 +751,15 @@ async function handleAdminGroupPatch(request, env, groupId) {
   if (!householdName) return json({ error: 'Household name is required.' }, 400);
   await env.DB.prepare(`
     UPDATE guest_groups
-    SET household_name = ?, plus_one_limit = ?, notes = ?, updated_at = CURRENT_TIMESTAMP
+    SET household_name = ?, plus_one_limit = ?, most_likely_not_coming = ?, notes = ?, updated_at = CURRENT_TIMESTAMP
     WHERE id = ?
-  `).bind(householdName, Math.max(0, Number(body.plusOneLimit || 0)), String(body.notes || '').trim(), groupId).run();
+  `).bind(
+    householdName,
+    Math.max(0, Number(body.plusOneLimit || 0)),
+    body.mostLikelyNotComing ? 1 : 0,
+    String(body.notes || '').trim(),
+    groupId,
+  ).run();
   if (Array.isArray(body.guests)) await replaceGroupGuests(env, groupId, body.guests);
   return json({ ok: true, group: (await listGroups(env)).find(group => group.id === groupId) });
 }
@@ -805,6 +820,7 @@ async function handleAdminImport(request, env) {
     const group = grouped.get(household) || {
       householdName: household,
       plusOneLimit: Number(row[idx('plus_one_limit')] || 0),
+      mostLikelyNotComing: /^(yes|true|1)$/i.test(row[idx('most_likely_not_coming')] || ''),
       notes: row[idx('notes')] || '',
       guests: [],
     };
@@ -830,9 +846,16 @@ async function handleAdminImport(request, env) {
   for (const group of grouped.values()) {
     const groupId = randomId('grp_');
     await env.DB.prepare(`
-      INSERT INTO guest_groups (id, household_name, access_code, plus_one_limit, notes)
-      VALUES (?, ?, ?, ?, ?)
-    `).bind(groupId, group.householdName, randomAccessCode(), Math.max(0, group.plusOneLimit), group.notes).run();
+      INSERT INTO guest_groups (id, household_name, access_code, plus_one_limit, most_likely_not_coming, notes)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `).bind(
+      groupId,
+      group.householdName,
+      randomAccessCode(),
+      Math.max(0, group.plusOneLimit),
+      group.mostLikelyNotComing ? 1 : 0,
+      group.notes,
+    ).run();
     await replaceGroupGuests(env, groupId, group.guests);
     imported += 1;
   }
@@ -857,6 +880,7 @@ async function handleAdminExport(env) {
     'additional_guest_spots',
     'submitted_additional_guests',
     'remaining_additional_spots',
+    'most_likely_not_coming',
     'sangeet_invited',
     'ceremony_invited',
     'reception_invited',
@@ -886,6 +910,7 @@ async function handleAdminExport(env) {
         additionalGuestSpots,
         submittedAdditionalGuests,
         remainingAdditionalSpots,
+        group.mostLikelyNotComing ? 'yes' : 'no',
         guest.sangeetInvited ? 'yes' : 'no',
         guest.ceremonyInvited ? 'yes' : 'no',
         guest.receptionInvited ? 'yes' : 'no',
@@ -910,6 +935,7 @@ async function handleAdminExport(env) {
         additionalGuestSpots,
         submittedAdditionalGuests,
         remainingAdditionalSpots,
+        group.mostLikelyNotComing ? 'yes' : 'no',
         '',
         '',
         '',

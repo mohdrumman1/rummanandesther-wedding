@@ -85,7 +85,7 @@ The built-in `roshan` account inherits Suja's password hash and always receives 
 
 Guest RSVP links: `/rsvp/:accessCode`.
 
-CSV import columns: `household, guest, plus_one_limit, partner, children_allowed, max_children, notes`.
+CSV import columns: `household, guest, plus_one_limit, most_likely_not_coming, partner, children_allowed, max_children, notes`.
 
 Currently, two official plugins are available:
 

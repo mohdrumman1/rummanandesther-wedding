@@ -258,6 +258,7 @@ function GuestEditor({ guests, setGuests }) {
 function GroupForm({ activeGroup, onSave, onCancel }) {
   const [householdName, setHouseholdName] = useState(activeGroup?.householdName || '')
   const [plusOneLimit, setPlusOneLimit] = useState(activeGroup?.plusOneLimit || 0)
+  const [mostLikelyNotComing, setMostLikelyNotComing] = useState(activeGroup?.mostLikelyNotComing || false)
   const [notes, setNotes] = useState(activeGroup?.notes || '')
   const [guests, setGuests] = useState(activeGroup?.guests?.length ? activeGroup.guests.map(guest => ({ ...guest })) : [blankGuest()])
   const [error, setError] = useState('')
@@ -282,6 +283,7 @@ function GroupForm({ activeGroup, onSave, onCancel }) {
       const payload = {
         householdName,
         plusOneLimit: Number(plusOneLimit || 0),
+        mostLikelyNotComing,
         notes,
         guests: cleanedGuests,
       }
@@ -328,6 +330,17 @@ function GroupForm({ activeGroup, onSave, onCancel }) {
             className={inputClass}
           />
         </div>
+      </div>
+      <div>
+        <label className="flex items-center gap-3 border border-gold/20 bg-cream/40 px-4 py-3 font-sans text-[12px] text-ink/60">
+          <input
+            type="checkbox"
+            checked={mostLikelyNotComing}
+            onChange={event => setMostLikelyNotComing(event.target.checked)}
+            className="accent-burgundy"
+          />
+          Most likely not coming
+        </label>
       </div>
       <div>
         <label className={labelClass}>Admin notes</label>
@@ -380,14 +393,14 @@ function CsvImport({ onImported }) {
       <div>
         <h2 className="font-serif text-3xl font-light text-ink">CSV Import</h2>
         <p className="mt-2 font-sans text-[12px] text-ink/45 font-light leading-relaxed">
-          Columns: household, guest, plus_one_limit, partner, children_allowed, max_children, sangeet_invited, ceremony_invited, reception_invited, notes.
+          Columns: household, guest, plus_one_limit, most_likely_not_coming, partner, children_allowed, max_children, sangeet_invited, ceremony_invited, reception_invited, notes.
         </p>
       </div>
       <textarea
         value={csv}
         onChange={event => setCsv(event.target.value)}
         rows={7}
-        placeholder={'household,guest,plus_one_limit,partner,children_allowed,max_children,sangeet_invited,ceremony_invited,reception_invited,notes\nAhmed Family,Amina Ahmed,1,false,true,2,yes,yes,yes,\nAhmed Family,Omar Ahmed,1,true,false,0,yes,yes,yes,'}
+        placeholder={'household,guest,plus_one_limit,most_likely_not_coming,partner,children_allowed,max_children,sangeet_invited,ceremony_invited,reception_invited,notes\nAhmed Family,Amina Ahmed,1,no,false,true,2,yes,yes,yes,\nAhmed Family,Omar Ahmed,1,no,true,false,0,yes,yes,yes,'}
         className={`${inputClass} resize-none font-mono text-[12px]`}
       />
       {status && <p className="font-sans text-[13px] text-ink/60">{status}</p>}
@@ -408,14 +421,14 @@ function copyInviteMessage(group, inviteLink) {
 
 function GroupTable({ groups, filter, onEdit, onDelete, readOnly }) {
   const filtered = groups.filter(group => filter === 'all' || groupStatus(group) === filter)
-  const headings = ['Household', 'Status', 'Seats', 'Sangeet', 'Ceremony', 'Reception']
+  const headings = ['Household', 'Status', 'Seats', 'Most likely not coming', 'Sangeet', 'Ceremony', 'Reception']
   if (!readOnly) headings.push('Invite Link')
   if (!readOnly) headings.push('Actions')
 
   return (
     <div className="border border-gold/25 bg-white overflow-hidden">
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[900px] text-left">
+        <table className="w-full min-w-[1040px] text-left">
           <thead className="bg-cream border-b border-gold/20">
             <tr>
               {headings.map(label => (
@@ -463,6 +476,15 @@ function GroupTable({ groups, filter, onEdit, onDelete, readOnly }) {
                     <p className="mt-2 max-w-[220px] text-ink/45">
                       {group.guests.map(guest => guest.name).join(', ')}
                     </p>
+                  </td>
+                  <td className="px-4 py-5 font-sans text-[13px] text-ink/60">
+                    {group.mostLikelyNotComing ? (
+                      <span className="inline-block border border-burgundy/20 bg-burgundy/5 px-3 py-2 font-sans text-[10px] uppercase tracking-ultra text-burgundy">
+                        Yes
+                      </span>
+                    ) : (
+                      <span className="font-sans text-[12px] text-ink/35">No</span>
+                    )}
                   </td>
                   <td className="px-4 py-5 font-sans text-[13px] text-ink/60">
                     {sangeetYes} yes
