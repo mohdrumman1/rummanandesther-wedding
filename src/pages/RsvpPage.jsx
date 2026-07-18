@@ -668,7 +668,7 @@ export default function RsvpPage() {
                   <span className="text-gold text-3xl block mb-4">◆</span>
                   <h2 className="font-serif text-3xl font-light text-ink mb-2">Thank you</h2>
                   <p className="font-sans text-[14px] font-light text-ink/60 leading-relaxed">
-                    Your RSVP has been saved. You can return to this same link to make changes before August 15, 2026.
+                    Your RSVP has been saved. You can return to this same link to make changes before August 31, 2026.
                   </p>
                 </motion.div>
               )}

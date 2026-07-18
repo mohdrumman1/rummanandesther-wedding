@@ -1,6 +1,6 @@
 const JSON_HEADERS = { 'content-type': 'application/json; charset=utf-8' };
 const NO_STORE_HEADERS = { 'cache-control': 'no-store' };
-const RSVP_DEADLINE = '2026-08-15';
+const RSVP_DEADLINE = '2026-08-31';
 
 function json(data, status = 200, extraHeaders = {}) {
   return new Response(JSON.stringify(data), {
@@ -386,6 +386,7 @@ async function createToken(env, user = { username: 'admin', role: 'admin' }) {
   const payload = {
     username: user.username,
     role: user.role,
+    canCopyInvites: user.canCopyInvites === true,
     sessionKey: user.sessionKey || null,
     exp: Math.floor(Date.now() / 1000) + 60 * 60 * 12,
   };
@@ -431,8 +432,14 @@ function findNamedUser(username, env) {
   if (normalizedUsername !== 'roshan') return null;
   const suja = users.find(user => String(user.username || '').toLowerCase() === 'suja');
   return suja?.passwordHash
-    ? { username: 'roshan', role: 'readonly', passwordHash: suja.passwordHash }
+    ? { username: 'roshan', role: 'readonly', canCopyInvites: true, passwordHash: suja.passwordHash }
     : null;
+}
+
+function userCanCopyInvites(user) {
+  if (user?.role === 'admin') return true;
+  if (user?.canCopyInvites === true) return true;
+  return ['suja', 'roshan'].includes(String(user?.username || '').toLowerCase());
 }
 
 async function namedSessionIsActive(payload, env) {
@@ -455,6 +462,7 @@ async function validateNamedUser(username, password, env) {
   return {
     username: user.username,
     role,
+    canCopyInvites: userCanCopyInvites({ ...user, role }),
     sessionKey: await namedUserSessionKey(user.username, role, user.passwordHash),
   };
 }
@@ -624,7 +632,7 @@ async function handleAdminLogin(request, env) {
     if (!env.SESSION_SECRET) return json({ error: 'SESSION_SECRET is not configured.' }, 500);
     return json({
       token: await createToken(env, user),
-      user: { username: user.username, role: user.role },
+      user: { username: user.username, role: user.role, canCopyInvites: user.canCopyInvites === true },
     });
   }
   const configuredHash = env.ADMIN_PASSWORD_HASH;
@@ -641,10 +649,11 @@ async function handleAdminLogin(request, env) {
   return json({ token: await createToken(env, user), user });
 }
 
-function readOnlyGroup(group) {
+function readOnlyGroup(group, { includeInviteAccess = false } = {}) {
   return {
     id: group.id,
     householdName: group.householdName,
+    ...(includeInviteAccess ? { accessCode: group.accessCode } : {}),
     mostLikelyNotComing: group.mostLikelyNotComing,
     summary: groupSummary(group),
     guests: group.guests.filter(guest => !guest.isAdditional).map(guest => ({
@@ -659,7 +668,11 @@ function readOnlyGroup(group) {
 
 async function handleAdminGroupsGet(env, session) {
   const groups = await listGroups(env);
-  if (session.role === 'readonly') return json({ groups: groups.map(readOnlyGroup) }, 200, NO_STORE_HEADERS);
+  if (session.role === 'readonly') {
+    return json({
+      groups: groups.map(group => readOnlyGroup(group, { includeInviteAccess: userCanCopyInvites(session) })),
+    }, 200, NO_STORE_HEADERS);
+  }
   return json({ groups }, 200, NO_STORE_HEADERS);
 }
 

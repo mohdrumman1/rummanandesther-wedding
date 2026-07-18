@@ -77,7 +77,7 @@ Named admin users can be configured with the `ADMIN_USERS` secret. It should be 
 ]
 ```
 
-Read-only users can view households, invited family member names, and aggregate RSVP counts. They cannot see access codes or invite URLs; copy invite and copy link controls are hidden. They also cannot create, edit, delete, import, export, or view admin notes, RSVP messages, dietary requirements, submitted timestamps, additional guest names, or individual attendance responses. RSVP links are bearer links, so only full admins should be allowed to view or copy them.
+Read-only users can view households, invited family member names, and aggregate RSVP counts. By default, they cannot see access codes or invite URLs; copy invite and copy link controls are hidden. The `suja` and built-in `roshan` read-only accounts can copy invite messages and invite links, but still cannot create, edit, delete, import, export, or view admin notes, RSVP messages, dietary requirements, submitted timestamps, additional guest names, or individual attendance responses.
 
 Named users must use `passwordHash`; plaintext `password` entries are ignored. The username `admin` is reserved for the owner admin password flow.
 

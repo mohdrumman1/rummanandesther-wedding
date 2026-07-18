@@ -419,10 +419,10 @@ function copyInviteMessage(group, inviteLink) {
   return `Hi ${group.householdName},\n\nWe'd love to invite you to our wedding. Please click the link below to RSVP:\n\n${inviteLink}\n\nWith love,\nRumman & Esther`
 }
 
-function GroupTable({ groups, filter, onEdit, onDelete, readOnly }) {
+function GroupTable({ groups, filter, onEdit, onDelete, readOnly, canCopyInvites }) {
   const filtered = groups.filter(group => filter === 'all' || groupStatus(group) === filter)
   const headings = ['Household', 'Status', 'Seats', 'Most likely not coming', 'Sangeet', 'Ceremony', 'Reception']
-  if (!readOnly) headings.push('Invite Link')
+  if (canCopyInvites) headings.push('Invite Link')
   if (!readOnly) headings.push('Actions')
 
   return (
@@ -444,7 +444,7 @@ function GroupTable({ groups, filter, onEdit, onDelete, readOnly }) {
               const sangeetYes = group.summary?.sangeetYes ?? group.guests.filter(guest => guest.sangeetAttending === true).length
               const ceremonyYes = group.summary?.ceremonyYes ?? group.guests.filter(guest => guest.ceremonyAttending === true).length
               const receptionYes = group.summary?.receptionYes ?? group.guests.filter(guest => guest.receptionAttending === true).length
-              const inviteLink = readOnly ? '' : buildInviteLink(group.accessCode)
+              const inviteLink = canCopyInvites ? buildInviteLink(group.accessCode) : ''
               const namedGuestCount = group.guests.filter(guest => !guest.isAdditional).length
               const submittedAdditionalGuests = group.guests.filter(guest => guest.isAdditional).length
               const additionalSpots = Number(group.plusOneLimit || 0)
@@ -495,7 +495,7 @@ function GroupTable({ groups, filter, onEdit, onDelete, readOnly }) {
                   <td className="px-4 py-5 font-sans text-[13px] text-ink/60">
                     {receptionYes} yes
                   </td>
-                  {!readOnly && <td className="px-4 py-5">
+                  {canCopyInvites && <td className="px-4 py-5">
                     <div className="flex flex-wrap gap-3">
                       <button
                         type="button"
@@ -552,6 +552,7 @@ export default function RsvpAdminPage() {
 
   const counts = useMemo(() => rsvpCounts(groups), [groups])
   const readOnly = user?.role === 'readonly'
+  const canCopyInvites = !readOnly || user?.canCopyInvites === true || ['suja', 'roshan'].includes(String(user?.username || '').toLowerCase())
 
   async function loadGroups() {
     if (!getAdminToken()) return
@@ -726,6 +727,7 @@ export default function RsvpAdminPage() {
                 onEdit={setActiveGroup}
                 onDelete={removeGroup}
                 readOnly={readOnly}
+                canCopyInvites={canCopyInvites}
               />
             </div>
           </div>
