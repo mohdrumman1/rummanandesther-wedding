@@ -28,8 +28,8 @@ export default function App() {
             <Route path="/dress-code" element={<DressCodePage />} />
             <Route path="/registry" element={<RegistryPage />} />
             <Route path="/accommodation" element={<AccommodationPage />} />
-            <Route path="/rsvp" element={<RsvpPage />} />
-            <Route path="/rsvp/:accessCode" element={<RsvpPage />} />
+            <Route path="/rsvp" element={<RsvpPage key={location.pathname} />} />
+            <Route path="/rsvp/:accessCode" element={<RsvpPage key={location.pathname} />} />
             <Route path="/admin" element={<RsvpAdminPage />} />
           </Routes>
         </AnimatePresence>

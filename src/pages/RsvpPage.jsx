@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { motion, useReducedMotion, useScroll, useTransform } from 'framer-motion'
 import PageHeader from '../components/PageHeader'
+import InvitationOpening from '../components/InvitationOpening'
 import { fetchRsvp, submitRsvp } from '../lib/rsvpApi'
 import { isAnswered, responseText } from '../lib/rsvpUtils'
 
@@ -17,6 +18,21 @@ const inputClass =
 const labelClass = 'block font-sans text-[10px] tracking-extreme uppercase text-ink/50 mb-2'
 
 const inviteEase = [0.22, 1, 0.36, 1]
+const invitationOpeningVersion = 'v1'
+
+function invitationOpeningKey(accessCode) {
+  return `wedding-invite-opening:${invitationOpeningVersion}:${accessCode}`
+}
+
+function shouldPlayInvitationOpening(accessCode) {
+  if (!accessCode || typeof window === 'undefined') return false
+  if (new URLSearchParams(window.location.search).get('preview') === 'opening') return true
+  try {
+    return sessionStorage.getItem(invitationOpeningKey(accessCode)) !== 'seen'
+  } catch {
+    return true
+  }
+}
 
 const pluralizeGuests = count => `${count} guest${count === 1 ? '' : 's'}`
 
@@ -543,6 +559,7 @@ function SeatSummary({ guests, plusOneLimit, pendingAdditional }) {
 export default function RsvpPage() {
   const { accessCode } = useParams()
   const rsvpRef = useRef(null)
+  const [showOpening, setShowOpening] = useState(() => shouldPlayInvitationOpening(accessCode))
   const [group, setGroup] = useState(null)
   const [guests, setGuests] = useState([])
   const [dietaryRequirements, setDietaryRequirements] = useState('')
@@ -607,6 +624,15 @@ export default function RsvpPage() {
 
   if (!accessCode) return <RsvpFallback />
 
+  function completeOpening() {
+    try {
+      sessionStorage.setItem(invitationOpeningKey(accessCode), 'seen')
+    } catch {
+      // The opening can still complete when browser storage is unavailable.
+    }
+    setShowOpening(false)
+  }
+
   async function handleSubmit(event) {
     event.preventDefault()
     setError('')
@@ -650,6 +676,7 @@ export default function RsvpPage() {
 
   return (
     <motion.div variants={pageVariants} initial="initial" animate="animate" exit="exit">
+      {showOpening && <InvitationOpening onComplete={completeOpening} />}
       <InvitationHero group={group} status={status} onOpenRsvp={openRsvp} />
 
       <div ref={rsvpRef} className="scroll-mt-24">
