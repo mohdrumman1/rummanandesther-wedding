@@ -104,77 +104,41 @@ function InvitationHero({ group, status, onOpenRsvp }) {
             transition={{ duration: 1.25, ease: inviteEase }}
             aria-hidden="true"
           />
-          <div className="relative overflow-hidden border border-gold/55 bg-cream px-6 py-12 text-ink shadow-2xl shadow-ink/40 sm:px-10 md:px-16 md:py-14">
-            <div
-              className="absolute inset-0 opacity-[0.06]"
-              style={{
-                backgroundImage: 'radial-gradient(circle at 1px 1px, #722F37 1px, transparent 0)',
-                backgroundSize: '18px 18px',
-              }}
-              aria-hidden="true"
+          <motion.div custom={0} variants={inviteItem} className="mx-auto w-full max-w-sm sm:max-w-md md:max-w-lg">
+            <img
+              src="/images/wedding-hero-800.jpg"
+              srcSet="/images/wedding-hero-800.jpg 800w, /images/wedding-hero-1055.jpg 1055w"
+              sizes="(max-width: 640px) 90vw, (max-width: 1024px) 60vw, 32rem"
+              alt="Rumman and Esther wedding invitation"
+              width={1055}
+              height={1491}
+              loading="eager"
+              fetchPriority="high"
+              decoding="async"
+              className="block h-auto w-full shadow-2xl shadow-ink/40"
             />
-            <div className="absolute inset-3 border border-gold/35 pointer-events-none" aria-hidden="true" />
-            <div className="absolute left-1/2 top-5 h-12 w-px -translate-x-1/2 bg-gradient-to-b from-gold/60 to-transparent" aria-hidden="true" />
-            <div className="absolute bottom-5 left-1/2 h-12 w-px -translate-x-1/2 bg-gradient-to-t from-gold/60 to-transparent" aria-hidden="true" />
-            <div className="relative">
-            <motion.div custom={0} variants={inviteItem}>
-              <div className="mx-auto mb-8 flex items-center justify-center gap-4">
-                <span className="h-px w-10 bg-gold/70 sm:w-16" />
-                <span className="font-sans text-[10px] tracking-extreme uppercase text-gold-dark">
-                  You are invited
-                </span>
-                <span className="h-px w-10 bg-gold/70 sm:w-16" />
-              </div>
-            </motion.div>
+          </motion.div>
 
-            <motion.p
-              custom={1}
-              variants={inviteItem}
-              className="font-sans text-[10px] tracking-extreme uppercase text-ink/55"
+          <motion.div custom={4} variants={inviteItem} className="mx-auto mt-10 max-w-xl">
+            <p className="font-sans text-[15px] font-light leading-relaxed text-white/80">
+              {group
+                ? `Dear ${group.householdName}, we would be honoured to celebrate this weekend with you.`
+                : status === 'loading'
+                  ? 'Your personal invitation is opening now.'
+                  : 'We would be honoured to celebrate this weekend with you.'}
+            </p>
+          </motion.div>
+
+          <motion.div custom={5} variants={inviteItem} className="mt-11">
+            <button
+              type="button"
+              onClick={onOpenRsvp}
+              className="group inline-flex min-h-12 items-center justify-center gap-4 border border-gold/50 bg-burgundy px-8 py-4 font-sans text-[10px] tracking-extreme uppercase text-white transition-all duration-300 hover:border-gold hover:bg-burgundy-dark focus:outline-none focus:ring-2 focus:ring-gold focus:ring-offset-4 focus:ring-offset-burgundy-dark"
             >
-              To the wedding of
-            </motion.p>
-            <motion.h1
-              custom={2}
-              variants={inviteItem}
-              className="mt-5 font-serif text-5xl font-light leading-none text-burgundy sm:text-7xl md:text-8xl"
-            >
-              Rumman
-              <span className="block py-1 font-script text-5xl text-gold-dark sm:text-6xl md:text-7xl">&amp;</span>
-              Esther
-            </motion.h1>
-
-            <motion.div custom={3} variants={inviteItem} className="mt-9">
-              <p className="font-sans text-[11px] tracking-ultra uppercase text-ink/70">
-                Saturday, 12 December 2026
-              </p>
-              <p className="mt-3 font-serif text-2xl font-light text-ink">
-                Hunter Valley, New South Wales
-              </p>
-            </motion.div>
-
-            <motion.div custom={4} variants={inviteItem} className="mx-auto mt-10 max-w-xl">
-              <p className="font-sans text-[15px] font-light leading-relaxed text-ink/75">
-                {group
-                  ? `Dear ${group.householdName}, we would be honoured to celebrate this weekend with you.`
-                  : status === 'loading'
-                    ? 'Your personal invitation is opening now.'
-                    : 'We would be honoured to celebrate this weekend with you.'}
-              </p>
-            </motion.div>
-
-            <motion.div custom={5} variants={inviteItem} className="mt-11">
-              <button
-                type="button"
-                onClick={onOpenRsvp}
-                className="group inline-flex min-h-12 items-center justify-center gap-4 border border-burgundy/35 bg-burgundy px-8 py-4 font-sans text-[10px] tracking-extreme uppercase text-white transition-all duration-300 hover:border-gold hover:bg-burgundy-dark focus:outline-none focus:ring-2 focus:ring-gold focus:ring-offset-4 focus:ring-offset-cream"
-              >
-                <span>Open RSVP</span>
-                <span className="text-gold transition-transform duration-300 group-hover:translate-y-1">↓</span>
-              </button>
-            </motion.div>
-            </div>
-          </div>
+              <span>Open RSVP</span>
+              <span className="text-gold transition-transform duration-300 group-hover:translate-y-1">↓</span>
+            </button>
+          </motion.div>
         </motion.div>
       </div>
 
