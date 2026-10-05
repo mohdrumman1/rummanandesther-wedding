@@ -37,7 +37,7 @@ export default function RegistryPage() {
           <h2 className="mb-6 font-serif text-4xl font-light text-ink md:text-5xl">No boxed gifts, please</h2>
           <div className="mx-auto max-w-xl space-y-5 font-sans text-[15px] font-light leading-relaxed text-ink/65">
             <p>Your presence is honestly more than enough. We’re not after boxed gifts, but if you’d like to contribute to our future together, we’ve set up a simple wishing well.</p>
-            <p>No pressure at all — we’re just happy to celebrate with you.</p>
+            <p>No pressure at all. We’re just happy to celebrate with you.</p>
           </div>
 
           <div className="mx-auto mt-12 max-w-xl border border-gold/25 bg-white/40 p-7 text-left md:p-9">
