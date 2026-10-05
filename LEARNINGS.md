@@ -1,4 +1,26 @@
-## 2026-07-12 — Plus-one INSERT missed new nullable-flag column, stuck households at "partial"
+## 2026-09-03: Remote D1 out of sync with `d1_migrations` ledger, blocked new migration with UNIQUE constraint
+
+**Tags:** worker, d1, migrations, wrangler, ledger-drift
+**Status:** Fixed
+
+**Issue:** Running `npm run worker:migrate:remote` to apply migration 0020 failed with `UNIQUE constraint failed: guests.id: SQLITE_CONSTRAINT_PRIMARYKEY`, even though 0020 only referenced brand-new random ids that had never been inserted before.
+
+**Investigation:**
+1. `npx wrangler d1 migrations list rummanandesther-rsvp --remote` showed the highest applied migration as `0016_add_saira_phillip_visa_invite.sql`; migrations 0017-0019 were untracked.
+2. Queried remote `guest_groups`/`guests` directly for ids/values that migrations 0017-0019 would insert or update (e.g. `grp_c9dbcd936dd8a12052410ad1a4bf18ce` household_name = 'Anne and Dr Alex Thomas', matching migration 0019 exactly). Confirmed all three migrations' SQL had already been executed against remote at some point.
+3. Since `wrangler d1 migrations apply` runs pending migrations in one batch, it attempted to re-run 0017-0019 (which reran fine as idempotent UPDATEs, or hit no-op INSERTs) followed by 0020, but the batch failure surfaced as a generic UNIQUE error because one of the re-run INSERTs in 0017/0018 tried to re-insert a guest row that already existed.
+
+**Root cause:** Someone previously applied 0017-0019's SQL to remote D1 via raw `wrangler d1 execute --file=...` (or similar) instead of `wrangler d1 migrations apply`. That writes the data but does NOT insert a row into the `d1_migrations` bookkeeping table, so wrangler still considers those migrations pending and tries to re-run them on the next `migrations apply`, colliding with the data that's already there.
+
+**Fix:** Manually reconciled the ledger: `INSERT INTO d1_migrations (name, applied_at) VALUES (...)` for `0017_dad_name_crosscheck.sql`, `0018_dad_batch2.sql`, `0019_dad_batch3.sql` via `wrangler d1 execute --remote`, after confirming their data was already correctly present (no data was touched, only the ledger). Then `npm run worker:migrate:remote` applied only 0020 cleanly.
+
+**Verify:** `wrangler d1 migrations list --remote` shows 0016-0020 all applied. Spot-checked new 0020 rows (`SELECT household_name FROM guest_groups WHERE id IN (...)`) all present.
+
+**If it recurs:** Never run `wrangler d1 execute --file=<migration>.sql` directly against `--remote` for a file under `worker/migrations/`; always use `npm run worker:migrate:remote` so the ledger stays in sync. If a migration's data is manually pushed for any reason, immediately backfill its `d1_migrations` row in the same session. Before trusting `migrations list`, spot-check a row/value the "unapplied" migration would have written, since the ledger can silently drift from real data.
+
+---
+
+## 2026-07-12: Plus-one INSERT missed new nullable-flag column, stuck households at "partial"
 
 **Tags:** rsvp, worker, additional-guests, insert, invited-flag, silent-default
 **Status:** Fixed
@@ -7,33 +29,33 @@
 
 **Investigation:**
 1. Reviewer traced the `handleRsvpPost` path (`worker/src/index.js` ~L470-560) and noticed the additional-guest INSERT column list omitted `sangeet_invited`, unlike the two admin write paths (`handleAdminGroupCreate`, `replaceGroupGuests`) which had been updated to include it.
-2. Confirmed via `grep -n 'INTO guests' worker/src/index.js` — three insert sites, only two updated.
-3. Backed by an end-to-end reproduction: local household with `sangeet_invited=0` + `plus_one_limit=2` submitted from public form with `additionalGuests: [{...sangeetAttending: null, ceremonyAttending: T, receptionAttending: T}]`. Row landed with `sangeet_invited=1` (from column default) and `sangeet_attending=NULL`. `groupSummary`/`groupStatus` require `sangeet_invited=false OR sangeet_attending !== null` to count as answered — new plus-one satisfied neither, household stayed "partial" forever.
+2. Confirmed via `grep -n 'INTO guests' worker/src/index.js`; three insert sites, only two updated.
+3. Backed by an end-to-end reproduction: local household with `sangeet_invited=0` + `plus_one_limit=2` submitted from public form with `additionalGuests: [{...sangeetAttending: null, ceremonyAttending: T, receptionAttending: T}]`. Row landed with `sangeet_invited=1` (from column default) and `sangeet_attending=NULL`. `groupSummary`/`groupStatus` require `sangeet_invited=false OR sangeet_attending !== null` to count as answered; new plus-one satisfied neither, household stayed "partial" forever.
 
 **Root cause:**
 `handleRsvpPost` at `worker/src/index.js:534-548` inserts new/re-inserted additional-guest rows. The column list did not include `sangeet_invited`, so SQLite fell back to the schema `DEFAULT 1`. This diverged from the two admin write paths which had been updated correctly. The frontend `AdditionalGuestForm` also did not tag pending plus-ones with `sangeetInvited`, so even if the backend had accepted a value, the payload would have been empty.
 
 **Fix (commit adding this entry):**
 
-1. **`worker/src/index.js`** — Added `sangeetInvited` (and, as part of a follow-up generalization, `ceremonyInvited` and `receptionInvited`) to:
+1. **`worker/src/index.js`**: Added `sangeetInvited` (and, as part of a follow-up generalization, `ceremonyInvited` and `receptionInvited`) to:
    - `existingAdditionalGuests` mapper: `sangeetInvited: current.sangeet_invited !== 0` (pull from DB row).
    - `newAdditionalGuests` mapper: `sangeetInvited: item?.sangeetInvited !== false` (pull from payload, default true).
    - The plus-one INSERT column list + bind list, binding `additionalGuest.sangeetInvited === false ? 0 : 1`.
 
-2. **`src/pages/RsvpPage.jsx`** — `AdditionalGuestForm.addGuest()` now includes `sangeetInvited` (from a household-level prop derived by `RsvpPage` from `guests.some(g => g.sangeetInvited !== false)`) in each new pending plus-one entry.
+2. **`src/pages/RsvpPage.jsx`**: `AdditionalGuestForm.addGuest()` now includes `sangeetInvited` (from a household-level prop derived by `RsvpPage` from `guests.some(g => g.sangeetInvited !== false)`) in each new pending plus-one entry.
 
 3. Grepped every `INSERT INTO guests` in the Worker and confirmed all three sites (`handleRsvpPost` plus-one, `handleAdminGroupCreate`, `replaceGroupGuests`) now include the invited flag. Same audit applies to `ceremony_invited` and `reception_invited` added alongside.
 
 **Verify:**
-- `npm run lint` — clean.
-- `npm run build` — clean.
+- `npm run lint`: clean.
+- `npm run build`: clean.
 - Local end-to-end trace: household with `sangeet_invited=0` on both primaries + `plus_one_limit=2`. Public form adds a plus-one with `sangeetAttending: null, ceremonyAttending: true, receptionAttending: true, sangeetInvited: false`. Worker INSERT lands the row with `sangeet_invited=0`. `groupStatus` computes "complete". Confirmed via `SELECT ... FROM guests WHERE is_additional=1` and `GET /api/admin/groups` summary.
 
-**If it recurs:** Any time a new column is added to `guests`, immediately grep `INSERT INTO guests` in `worker/src/index.js` — there are THREE insert sites. Check each. Then grep the frontend for wherever `pendingAdditional` / `body.additionalGuests` is built and confirm the new field is threaded in. The additional-guest path is DELETE+INSERT on every submit, so any column that isn't explicitly included silently reverts to its schema default and can wipe admin overrides.
+**If it recurs:** Any time a new column is added to `guests`, immediately grep `INSERT INTO guests` in `worker/src/index.js`; there are THREE insert sites. Check each. Then grep the frontend for wherever `pendingAdditional` / `body.additionalGuests` is built and confirm the new field is threaded in. The additional-guest path is DELETE+INSERT on every submit, so any column that isn't explicitly included silently reverts to its schema default and can wipe admin overrides.
 
 ---
 
-## 2026-06-26 — Read-only RSVP admin summary counters all zero
+## 2026-06-26: Read-only RSVP admin summary counters all zero
 
 **Tags:** rsvp, admin, read-only, dashboard, counters
 **Status:** Fixed
@@ -42,17 +64,17 @@
 
 **Investigation:**
 1. Read `worker/migrations/0001_initial.sql` to confirm field names (`sangeet_attending`, `ceremony_attending`, `rsvp_notes.submitted_at`).
-2. Read `worker/src/index.js` — found `readOnlyGroup()` (line 570) strips guest attendance data (`sangeetAttending: null`, `ceremonyAttending: null`, `childrenCount: 0`) but was NOT including a pre-computed summary, so the frontend had no real data to count from.
-3. Read `src/lib/rsvpUtils.js` — `rsvpCounts()` derives counts from per-guest fields; `groupStatus()` derived status from per-guest fields. Both relied on guest-level data that was zeroed out in read-only responses.
-4. Read `src/pages/RsvpAdminPage.jsx` — confirmed counter rendering uses `rsvpCounts(groups)` and per-row sangeet/ceremony counts also derived from `guest.sangeetAttending`.
+2. Read `worker/src/index.js`; found `readOnlyGroup()` (line 570) strips guest attendance data (`sangeetAttending: null`, `ceremonyAttending: null`, `childrenCount: 0`) but was NOT including a pre-computed summary, so the frontend had no real data to count from.
+3. Read `src/lib/rsvpUtils.js`; `rsvpCounts()` derives counts from per-guest fields; `groupStatus()` derived status from per-guest fields. Both relied on guest-level data that was zeroed out in read-only responses.
+4. Read `src/pages/RsvpAdminPage.jsx`; confirmed counter rendering uses `rsvpCounts(groups)` and per-row sangeet/ceremony counts also derived from `guest.sangeetAttending`.
 
 **Root cause:**
-`readOnlyGroup()` in `worker/src/index.js` (line 572-583 pre-fix) hardcoded `sangeetAttending: null` and `ceremonyAttending: null` on every guest to prevent data leakage. However, it did not include a server-side pre-computed summary, so the frontend's `rsvpCounts()` (`src/lib/rsvpUtils.js:30`) had no real attendance data to aggregate — all counts came out zero. The "Complete" count was also broken because `groupStatus()` re-derived status from the zeroed guest fields instead of using a server-supplied status.
+`readOnlyGroup()` in `worker/src/index.js` (line 572-583 pre-fix) hardcoded `sangeetAttending: null` and `ceremonyAttending: null` on every guest to prevent data leakage. However, it did not include a server-side pre-computed summary, so the frontend's `rsvpCounts()` (`src/lib/rsvpUtils.js:30`) had no real attendance data to aggregate; all counts came out zero. The "Complete" count was also broken because `groupStatus()` re-derived status from the zeroed guest fields instead of using a server-supplied status.
 
 **Fix:**
 Three-part fix in commit `cbbebd5`:
 
-1. **`worker/src/index.js`** — Added `groupSummary()` function (new lines 156-175) that computes status, sangeetYes, ceremonyYes, sangeetNo, ceremonyNo, children from real guest data. Added `summary: groupSummary(group)` to `readOnlyGroup()` return value so the API includes accurate aggregate counts without exposing per-guest sensitive fields. Also added `NO_STORE_HEADERS` to both admin groups responses.
+1. **`worker/src/index.js`**: Added `groupSummary()` function (new lines 156-175) that computes status, sangeetYes, ceremonyYes, sangeetNo, ceremonyNo, children from real guest data. Added `summary: groupSummary(group)` to `readOnlyGroup()` return value so the API includes accurate aggregate counts without exposing per-guest sensitive fields. Also added `NO_STORE_HEADERS` to both admin groups responses.
 
    Key diff in `readOnlyGroup()`:
    ```js
@@ -64,8 +86,8 @@ Three-part fix in commit `cbbebd5`:
        accessCode: group.accessCode,
        guests: group.guests.filter(...).map(guest => ({
          name: guest.name,
-         sangeetAttending: null,   // zeroed — broke counters
-         ceremonyAttending: null,  // zeroed — broke counters
+         sangeetAttending: null,   // zeroed, broke counters
+         ceremonyAttending: null,  // zeroed, broke counters
          childrenCount: 0,
        })),
      };
@@ -88,19 +110,19 @@ Three-part fix in commit `cbbebd5`:
    }
    ```
 
-2. **`src/lib/rsvpUtils.js`** — `groupStatus()`: added early return `if (group.summary?.status) return group.summary.status` so read-only groups use the server-supplied status instead of re-deriving from zeroed guest fields. `rsvpCounts()`: added a `if (group.summary)` branch that reads sangeetYes/ceremonyYes/etc. from the summary instead of per-guest fields.
+2. **`src/lib/rsvpUtils.js`**: `groupStatus()`: added early return `if (group.summary?.status) return group.summary.status` so read-only groups use the server-supplied status instead of re-deriving from zeroed guest fields. `rsvpCounts()`: added a `if (group.summary)` branch that reads sangeetYes/ceremonyYes/etc. from the summary instead of per-guest fields.
 
-3. **`src/pages/RsvpAdminPage.jsx`** — Per-row sangeet/ceremony counts changed from `group.guests.filter(...)` to `group.summary?.sangeetYes ?? group.guests.filter(...)` so the table columns also show correct values for read-only.
+3. **`src/pages/RsvpAdminPage.jsx`**: Per-row sangeet/ceremony counts changed from `group.guests.filter(...)` to `group.summary?.sangeetYes ?? group.guests.filter(...)` so the table columns also show correct values for read-only.
 
 **Verify:**
-- `npm run lint` — passes clean (no output, exit 0).
+- `npm run lint`: passes clean (no output, exit 0).
 - Logic trace: read-only login → `handleAdminGroupsGet` → `readOnlyGroup()` → `groupSummary(group)` called on full group data from DB → `summary.sangeetYes = 23`, `summary.ceremonyYes = 25`, `summary.status = 'complete'/'pending'` per group → frontend `rsvpCounts()` reads `group.summary` branch → correct totals displayed.
 
-**If it recurs:** Check `readOnlyGroup()` in `worker/src/index.js` — confirm `summary: groupSummary(group)` is present. Check `groupSummary()` is called BEFORE guests are stripped. Check `rsvpUtils.js:rsvpCounts()` has the `if (group.summary)` branch. Verify with a `console.log` of the `/api/admin/groups` response as the read-only user and confirm `summary.sangeetYes` is non-zero.
+**If it recurs:** Check `readOnlyGroup()` in `worker/src/index.js`; confirm `summary: groupSummary(group)` is present. Check `groupSummary()` is called BEFORE guests are stripped. Check `rsvpUtils.js:rsvpCounts()` has the `if (group.summary)` branch. Verify with a `console.log` of the `/api/admin/groups` response as the read-only user and confirm `summary.sangeetYes` is non-zero.
 
 ---
 
-## 2026-06-26 — Frontend dist stale after fix commit (cbbebd5)
+## 2026-06-26: Frontend dist stale after fix commit (cbbebd5)
 
 **Tags:** build, deploy, netlify, stale-dist
 **Status:** Fixed
@@ -109,12 +131,12 @@ Three-part fix in commit `cbbebd5`:
 
 **Root cause:** The build was run before the fix commit was finalised. `npm run build` must be re-run after any source change.
 
-**Fix:** Ran `npm run build` — new bundle (`dist/assets/index-DF78Na-u.js`, timestamp 19:24:18) confirmed to contain `summary.status`, `sangeetYes`, `ceremonyYes` from the fix. Netlify deploy must also be triggered with the new dist.
+**Fix:** Ran `npm run build`; new bundle (`dist/assets/index-DF78Na-u.js`, timestamp 19:24:18) confirmed to contain `summary.status`, `sangeetYes`, `ceremonyYes` from the fix. Netlify deploy must also be triggered with the new dist.
 
 **Verify:** Check `dist/assets/index-*.js` timestamp is newer than the last fix commit. Grep for `summary.status` in the bundle to confirm the frontend fix is included.
 
 **If it recurs:** Always run `npm run build` after any source edit and before deploying to Netlify. Also deploy the worker via `npm run worker:deploy` after any `worker/src/index.js` changes.
-## 2026-07-02 — Read-only access must exclude bearer invite links
+## 2026-07-02: Read-only access must exclude bearer invite links
 
 **Learning:** A view-only user should receive only the information needed to inspect the invite list. Do not send RSVP access codes or invite URLs to read-only clients, and do not render Copy Invite or Copy Link controls. Hiding the buttons alone is insufficient because a URL present in the API response or page can still be copied or shared accidentally.
 
