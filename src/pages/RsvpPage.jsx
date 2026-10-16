@@ -85,6 +85,7 @@ function InvitationHero({ group, status, onOpenRsvp }) {
   const ornamentsY = useTransform(scrollY, [0, 900], ['0%', shouldReduceMotion ? '0%' : '-8%'])
   const cardScale = useTransform(scrollY, [0, 900], [1, shouldReduceMotion ? 1 : 0.985])
   const rsvpDeadline = formatRsvpDeadline(group?.rsvpDeadline)
+  const isPortMacquarieInvitation = group?.guests?.some(guest => guest.portMacquarieReceptionInvited === true)
 
   return (
     <section
@@ -122,10 +123,10 @@ function InvitationHero({ group, status, onOpenRsvp }) {
           />
           <motion.div custom={0} variants={inviteItem} className="mx-auto w-full max-w-sm sm:max-w-md md:max-w-lg">
             <img
-              src="/images/wedding-hero-800.jpg"
-              srcSet="/images/wedding-hero-800.jpg 800w, /images/wedding-hero-1055.jpg 1055w"
+              src={isPortMacquarieInvitation ? '/images/port-macquarie-invitation.png' : '/images/wedding-hero-800.jpg'}
+              srcSet={isPortMacquarieInvitation ? undefined : '/images/wedding-hero-800.jpg 800w, /images/wedding-hero-1055.jpg 1055w'}
               sizes="(max-width: 640px) 90vw, (max-width: 1024px) 60vw, 32rem"
-              alt="Rumman and Esther wedding invitation"
+              alt={isPortMacquarieInvitation ? 'Rumman and Esther Port Macquarie reception invitation' : 'Rumman and Esther wedding invitation'}
               width={1055}
               height={1491}
               loading="eager"
@@ -374,7 +375,7 @@ function GuestCard({ guest, onChange, portMacquarieReceptionDate }) {
           <label className={labelClass}>Port Macquarie Reception</label>
           <p className="mb-3 font-sans text-[12px] font-light text-ink/50">
             {portMacquarieReceptionDate
-              ? `Saturday, ${formatEventDate(portMacquarieReceptionDate)} · Port Macquarie`
+              ? `Saturday, ${formatEventDate(portMacquarieReceptionDate)} · 6:00 pm · Port Macquarie`
               : 'Private reception details will be shared separately.'}
           </p>
           <div className="grid max-w-sm grid-cols-2 gap-3">
