@@ -20,6 +20,17 @@ const inviteEase = [0.22, 1, 0.36, 1]
 
 const pluralizeGuests = count => `${count} guest${count === 1 ? '' : 's'}`
 
+function formatRsvpDeadline(deadline) {
+  if (!deadline) return ''
+  const [year, month, day] = deadline.split('-').map(Number)
+  if (!year || !month || !day) return deadline
+  return new Intl.DateTimeFormat('en-AU', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  }).format(new Date(Date.UTC(year, month - 1, day)))
+}
+
 function dressCodeLink({ sangeetInvited, ceremonyInvited, receptionInvited }) {
   const events = [
     sangeetInvited && 'sangeet',
@@ -69,6 +80,7 @@ function InvitationHero({ group, status, onOpenRsvp }) {
   const cardY = useTransform(scrollY, [0, 900], ['0%', shouldReduceMotion ? '0%' : '10%'])
   const ornamentsY = useTransform(scrollY, [0, 900], ['0%', shouldReduceMotion ? '0%' : '-8%'])
   const cardScale = useTransform(scrollY, [0, 900], [1, shouldReduceMotion ? 1 : 0.985])
+  const rsvpDeadline = formatRsvpDeadline(group?.rsvpDeadline)
 
   return (
     <section
@@ -127,6 +139,11 @@ function InvitationHero({ group, status, onOpenRsvp }) {
                   ? 'Your personal invitation is opening now.'
                   : 'We would be honoured to celebrate this weekend with you.'}
             </p>
+            {rsvpDeadline && (
+              <p className="mt-4 font-sans text-[10px] uppercase tracking-extreme text-gold">
+                Kindly RSVP by {rsvpDeadline}
+              </p>
+            )}
           </motion.div>
 
           <motion.div custom={5} variants={inviteItem} className="mt-11">
@@ -263,13 +280,15 @@ function GuestCard({ guest, onChange }) {
   const sangeetInvited = guest.sangeetInvited !== false
   const ceremonyInvited = guest.ceremonyInvited !== false
   const receptionInvited = guest.receptionInvited !== false
-  const invitedCount = [sangeetInvited, ceremonyInvited, receptionInvited].filter(Boolean).length
+  const portMacquarieReceptionInvited = guest.portMacquarieReceptionInvited === true
+  const invitedCount = [sangeetInvited, ceremonyInvited, receptionInvited, portMacquarieReceptionInvited].filter(Boolean).length
   if (invitedCount === 0) return null
   const gridColsClass = invitedCount === 3 ? 'md:grid-cols-3' : invitedCount === 2 ? 'md:grid-cols-2' : 'md:grid-cols-1'
   const summary = [
     sangeetInvited && `Sangeet: ${responseText(guest.sangeetAttending)}`,
     ceremonyInvited && `Ceremony: ${responseText(guest.ceremonyAttending)}`,
     receptionInvited && `Reception: ${responseText(guest.receptionAttending)}`,
+    portMacquarieReceptionInvited && `Port Macquarie Reception: ${responseText(guest.portMacquarieReceptionAttending)}`,
   ].filter(Boolean).join(' · ')
   const childCounterCount = [ceremonyInvited, receptionInvited].filter(Boolean).length
   return (
@@ -345,6 +364,24 @@ function GuestCard({ guest, onChange }) {
           </div>
         )}
       </div>
+
+      {portMacquarieReceptionInvited && (
+        <div className="border-t border-gold/15 pt-5">
+          <label className={labelClass}>Port Macquarie Reception</label>
+          <p className="mb-3 font-sans text-[12px] font-light text-ink/50">Private reception details will be shared separately.</p>
+          <div className="grid max-w-sm grid-cols-2 gap-3">
+            <AttendanceButton selected={guest.portMacquarieReceptionAttending === true} onClick={() => onChange({ ...guest, portMacquarieReceptionAttending: true })}>Yes</AttendanceButton>
+            <AttendanceButton selected={guest.portMacquarieReceptionAttending === false} onClick={() => onChange({ ...guest, portMacquarieReceptionAttending: false, portMacquarieReceptionChildrenCount: 0 })}>No</AttendanceButton>
+          </div>
+          {guest.childrenAllowed && (
+            <div className="mt-5">
+              <ChildCounter label="Children attending Port Macquarie Reception" count={guest.portMacquarieReceptionChildrenCount || 0}
+                max={guest.maxChildren} enabled={guest.portMacquarieReceptionAttending === true} guestName={guest.name}
+                onChange={count => onChange({ ...guest, portMacquarieReceptionChildrenCount: count })} />
+            </div>
+          )}
+        </div>
+      )}
 
       {guest.childrenAllowed && childCounterCount > 0 && (
         <div className={`pt-5 border-t border-gold/15 grid gap-5 ${childCounterCount === 2 ? 'md:grid-cols-2' : 'md:grid-cols-1'}`}>
@@ -552,9 +589,13 @@ export default function RsvpPage() {
     () => guests.some(guest => guest.receptionInvited !== false),
     [guests],
   )
+  const householdPortMacquarieReceptionInvited = useMemo(
+    () => guests.some(guest => guest.portMacquarieReceptionInvited === true),
+    [guests],
+  )
   const householdHasAnyInvites = useMemo(
     () => guests.some(guest =>
-      guest.sangeetInvited !== false || guest.ceremonyInvited !== false || guest.receptionInvited !== false
+      guest.sangeetInvited !== false || guest.ceremonyInvited !== false || guest.receptionInvited !== false || guest.portMacquarieReceptionInvited === true
     ),
     [guests],
   )
@@ -578,6 +619,7 @@ export default function RsvpPage() {
       (guest.sangeetInvited !== false && !isAnswered(guest.sangeetAttending)) ||
       (guest.ceremonyInvited !== false && !isAnswered(guest.ceremonyAttending)) ||
       (guest.receptionInvited !== false && !isAnswered(guest.receptionAttending))
+      || (guest.portMacquarieReceptionInvited === true && !isAnswered(guest.portMacquarieReceptionAttending))
     )
     if (incomplete.length) {
       setError('Please respond yes or no for each guest and each event before submitting.')
@@ -587,6 +629,7 @@ export default function RsvpPage() {
       (householdSangeetInvited && !isAnswered(guest.sangeetAttending)) ||
       (householdCeremonyInvited && !isAnswered(guest.ceremonyAttending)) ||
       (householdReceptionInvited && !isAnswered(guest.receptionAttending))
+      || (householdPortMacquarieReceptionInvited && !isAnswered(guest.portMacquarieReceptionAttending))
     )) {
       setError('Please respond yes or no for each additional guest and each event before submitting.')
       return
@@ -632,7 +675,7 @@ export default function RsvpPage() {
                   <span className="text-gold text-3xl block mb-4">◆</span>
                   <h2 className="font-serif text-3xl font-light text-ink mb-2">Thank you</h2>
                   <p className="font-sans text-[14px] font-light text-ink/60 leading-relaxed">
-                    Your RSVP has been saved. You can return to this same link to make changes before August 31, 2026.
+                    Your RSVP has been saved. You can return to this same link to make changes before {formatRsvpDeadline(group.rsvpDeadline)}.
                   </p>
                 </motion.div>
               )}

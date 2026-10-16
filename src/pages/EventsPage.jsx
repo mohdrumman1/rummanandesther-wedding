@@ -11,28 +11,31 @@ const events = [
   {
     type: 'Sangeet',
     icon: '◇',
-    venue: 'Our Home',
-    address: '11 Redmond Cct, Cameron Park NSW',
+    venue: 'Pasterfield Sports Complex',
+    address: '20 Horizon Ave, Cameron Park NSW 2285',
+    directionsUrl: 'https://www.google.com/maps/search/?api=1&query=Pasterfield+Sports+Complex%2C+20+Horizon+Ave%2C+Cameron+Park+NSW+2285',
     time: 'An evening of dancing and singing',
     date: 'Friday, December 11, 2026',
     description:
-      'Join us the night before the wedding for the Sangeet: a joyful evening of dancing, singing, and celebration at our home.',
+      'Join us the night before the wedding for the Sangeet: a joyful evening of dancing, singing, and celebration at Pasterfield Sports Complex.',
   },
   {
     type: 'Ceremony',
     icon: '◇',
-    venue: 'Venue details coming soon',
+    venue: "Saint Peter's Church",
     address: 'Hunter Valley, NSW, Australia',
+    directionsUrl: 'https://maps.app.goo.gl/hHtznwBQ5G4HQaXr6',
     time: 'Ceremony begins on 12 December 2026',
     date: 'Saturday, December 12, 2026',
     description:
-      'Join us as we exchange our vows in Hunter Valley. Venue and time details will be shared soon.',
+      "Join us as we exchange our vows at Saint Peter's Church in Hunter Valley.",
   },
   {
     type: 'Reception',
     icon: '◇',
     venue: 'Rydges Resort Hunter Valley',
     address: '430 Wine Country Drive, Lovedale NSW 2325',
+    directionsUrl: 'https://www.google.com/maps/search/?api=1&query=Rydges+Resort+Hunter+Valley%2C+430+Wine+Country+Drive%2C+Lovedale+NSW+2325',
     time: 'Western-inspired evening reception',
     date: 'Saturday, December 12, 2026',
     description:
@@ -100,9 +103,20 @@ export default function EventsPage() {
                   </p>
 
                   <div className="flex flex-wrap gap-4">
-                    <span className="font-sans text-[10px] tracking-ultra uppercase border border-gold/30 text-gold/70 px-5 py-2 cursor-default">
-                      Directions coming soon
-                    </span>
+                    {event.directionsUrl ? (
+                      <a
+                        href={event.directionsUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="font-sans text-[10px] tracking-ultra uppercase border border-gold/30 text-gold/70 px-5 py-2 hover:border-gold hover:text-gold transition-colors"
+                      >
+                        Open in Google Maps ↗
+                      </a>
+                    ) : (
+                      <span className="font-sans text-[10px] tracking-ultra uppercase border border-gold/30 text-gold/70 px-5 py-2 cursor-default">
+                        Directions coming soon
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>

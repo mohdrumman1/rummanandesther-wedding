@@ -88,12 +88,15 @@ function guestRow(row) {
     childrenCount: Math.max(row.ceremony_children_count || 0, row.reception_children_count || 0),
     ceremonyChildrenCount: row.ceremony_children_count || 0,
     receptionChildrenCount: row.reception_children_count || 0,
+    portMacquarieReceptionChildrenCount: row.port_macquarie_reception_children_count || 0,
     sangeetAttending: asBool(row.sangeet_attending),
     ceremonyAttending: asBool(row.ceremony_attending),
     receptionAttending: asBool(row.reception_attending),
+    portMacquarieReceptionAttending: asBool(row.port_macquarie_reception_attending),
     sangeetInvited: row.sangeet_invited !== 0,
     ceremonyInvited: row.ceremony_invited !== 0,
     receptionInvited: row.reception_invited !== 0,
+    portMacquarieReceptionInvited: row.port_macquarie_reception_invited === 1,
   };
 }
 
@@ -128,12 +131,15 @@ function publicGuestRow(guest) {
     childrenCount: 0,
     ceremonyChildrenCount: 0,
     receptionChildrenCount: 0,
+    portMacquarieReceptionChildrenCount: 0,
     sangeetAttending: null,
     ceremonyAttending: null,
     receptionAttending: null,
+    portMacquarieReceptionAttending: null,
     sangeetInvited: guest.sangeetInvited,
     ceremonyInvited: guest.ceremonyInvited,
     receptionInvited: guest.receptionInvited,
+    portMacquarieReceptionInvited: guest.portMacquarieReceptionInvited,
   };
 }
 
@@ -160,9 +166,11 @@ function submittedRsvpGroup(group) {
       childrenCount: guest.childrenCount,
       ceremonyChildrenCount: guest.ceremonyChildrenCount,
       receptionChildrenCount: guest.receptionChildrenCount,
+      portMacquarieReceptionChildrenCount: guest.portMacquarieReceptionChildrenCount,
       sangeetAttending: guest.sangeetAttending,
       ceremonyAttending: guest.ceremonyAttending,
       receptionAttending: guest.receptionAttending,
+      portMacquarieReceptionAttending: guest.portMacquarieReceptionAttending,
     })),
     rsvp: {
       dietaryRequirements: group.rsvp.dietaryRequirements,
@@ -178,9 +186,10 @@ function groupSummary(group) {
     (guest.sangeetInvited === false || guest.sangeetAttending !== null) &&
     (guest.ceremonyInvited === false || guest.ceremonyAttending !== null) &&
     (guest.receptionInvited === false || guest.receptionAttending !== null)
+    && (guest.portMacquarieReceptionInvited === false || guest.portMacquarieReceptionAttending !== null)
   );
   const someAnswered = guests.some(guest =>
-    guest.sangeetAttending !== null || guest.ceremonyAttending !== null || guest.receptionAttending !== null
+    guest.sangeetAttending !== null || guest.ceremonyAttending !== null || guest.receptionAttending !== null || guest.portMacquarieReceptionAttending !== null
   );
   return {
     status: !guests.length ? 'empty' : allAnswered ? 'complete' : someAnswered ? 'partial' : 'pending',
@@ -190,6 +199,8 @@ function groupSummary(group) {
     sangeetNo: guests.filter(guest => guest.sangeetAttending === false).length,
     ceremonyNo: guests.filter(guest => guest.ceremonyAttending === false).length,
     receptionNo: guests.filter(guest => guest.receptionAttending === false).length,
+    portMacquarieReceptionYes: guests.filter(guest => guest.portMacquarieReceptionAttending === true).length,
+    portMacquarieReceptionNo: guests.filter(guest => guest.portMacquarieReceptionAttending === false).length,
     children: guests.reduce((total, guest) => total + Number(guest.childrenCount || 0), 0),
   };
 }
@@ -490,20 +501,27 @@ async function handleRsvpPost(request, env, accessCode) {
 
   const currentGuests = await env.DB.prepare('SELECT * FROM guests WHERE group_id = ?').bind(group.id).all();
   const currentById = new Map((currentGuests.results || []).map(guest => [guest.id, guest]));
-  const existingAdditionalGuests = body.guests
-    .map(submitted => ({ submitted, current: currentById.get(submitted.id) }))
-    .filter(({ current }) => current?.is_additional === 1)
-    .map(({ submitted, current }) => ({
-      name: current.name,
-      sangeetAttending: submitted.sangeetAttending,
-      ceremonyAttending: submitted.ceremonyAttending,
-      receptionAttending: Object.hasOwn(submitted, 'receptionAttending')
-        ? submitted.receptionAttending
-        : submitted.ceremonyAttending,
-      sangeetInvited: current.sangeet_invited !== 0,
-      ceremonyInvited: current.ceremony_invited !== 0,
-      receptionInvited: current.reception_invited !== 0,
-    }));
+  const submittedById = new Map(body.guests.map(guest => [guest.id, guest]));
+  const existingAdditionalGuests = (currentGuests.results || [])
+    .filter(current => current.is_additional === 1)
+    .map(current => {
+      const submitted = submittedById.get(current.id);
+      return {
+        name: current.name,
+        sangeetAttending: submitted ? submitted.sangeetAttending : asBool(current.sangeet_attending),
+        ceremonyAttending: submitted ? submitted.ceremonyAttending : asBool(current.ceremony_attending),
+        receptionAttending: submitted
+          ? (Object.hasOwn(submitted, 'receptionAttending') ? submitted.receptionAttending : submitted.ceremonyAttending)
+          : asBool(current.reception_attending),
+        portMacquarieReceptionAttending: submitted
+          ? (Object.hasOwn(submitted, 'portMacquarieReceptionAttending') ? submitted.portMacquarieReceptionAttending : asBool(current.port_macquarie_reception_attending))
+          : asBool(current.port_macquarie_reception_attending),
+        sangeetInvited: current.sangeet_invited !== 0,
+        ceremonyInvited: current.ceremony_invited !== 0,
+        receptionInvited: current.reception_invited !== 0,
+        portMacquarieReceptionInvited: current.port_macquarie_reception_invited === 1,
+      };
+    });
   const newAdditionalGuests = Array.isArray(body.additionalGuests)
     ? body.additionalGuests.map(item => typeof item === 'string'
       ? { name: normalizeName(item), sangeetAttending: true, ceremonyAttending: true, receptionAttending: true, sangeetInvited: true, ceremonyInvited: true, receptionInvited: true }
@@ -534,18 +552,26 @@ async function handleRsvpPost(request, env, accessCode) {
     const receptionChildrenCount = guest.children_allowed === 1 && receptionAttending === true
       ? Math.max(0, Math.min(Number(submitted.receptionChildrenCount ?? submitted.childrenCount ?? 0), guest.max_children || 0))
       : 0;
+    const portMacquarieReceptionAttending = Object.hasOwn(submitted, 'portMacquarieReceptionAttending')
+      ? submitted.portMacquarieReceptionAttending
+      : asBool(guest.port_macquarie_reception_attending);
+    const portMacquarieReceptionChildrenCount = guest.children_allowed === 1 && portMacquarieReceptionAttending === true
+      ? Math.max(0, Math.min(Number(submitted.portMacquarieReceptionChildrenCount || 0), guest.max_children || 0))
+      : 0;
     statements.push(env.DB.prepare(`
       UPDATE guests
-      SET sangeet_attending = ?, ceremony_attending = ?, reception_attending = ?,
-          children_count = ?, ceremony_children_count = ?, reception_children_count = ?, updated_at = CURRENT_TIMESTAMP
+      SET sangeet_attending = ?, ceremony_attending = ?, reception_attending = ?, port_macquarie_reception_attending = ?,
+          children_count = ?, ceremony_children_count = ?, reception_children_count = ?, port_macquarie_reception_children_count = ?, updated_at = CURRENT_TIMESTAMP
       WHERE id = ? AND group_id = ?
     `).bind(
       boolToDb(submitted.sangeetAttending),
       boolToDb(submitted.ceremonyAttending),
       boolToDb(receptionAttending),
+      boolToDb(portMacquarieReceptionAttending),
       Math.max(ceremonyChildrenCount, receptionChildrenCount),
       ceremonyChildrenCount,
       receptionChildrenCount,
+      portMacquarieReceptionChildrenCount,
       guest.id,
       group.id,
     ));

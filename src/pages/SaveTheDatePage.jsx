@@ -146,6 +146,10 @@ export default function SaveTheDatePage() {
               please save the date and let us know if you'll be joining us.
             </p>
 
+            <p className="mb-6 font-sans text-[10px] tracking-extreme uppercase text-gold">
+              Please RSVP by 31 August 2026
+            </p>
+
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link
                 to="/rsvp"

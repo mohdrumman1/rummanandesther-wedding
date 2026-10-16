@@ -99,6 +99,9 @@ export default function Home() {
             >
               RSVP
             </Link>
+            <p className="mt-5 font-sans text-[9px] tracking-extreme uppercase text-gold/90">
+              Please RSVP by 31 August 2026
+            </p>
           </motion.div>
 
           {/* Scroll indicator */}
@@ -174,12 +177,17 @@ export default function Home() {
               ready to celebrate.
             </p>
 
-            <Link
-              to="/rsvp"
-              className="inline-block font-sans text-[10px] tracking-extreme uppercase border border-ink text-ink px-9 py-4 hover:bg-ink hover:text-cream transition-all duration-300"
-            >
-              RSVP Now
-            </Link>
+            <div className="inline-flex flex-col items-center">
+              <Link
+                to="/rsvp"
+                className="inline-block font-sans text-[10px] tracking-extreme uppercase border border-ink text-ink px-9 py-4 hover:bg-ink hover:text-cream transition-all duration-300"
+              >
+                RSVP Now
+              </Link>
+              <p className="mt-4 font-sans text-[9px] tracking-extreme uppercase text-ink/50">
+                Please RSVP by 31 August 2026
+              </p>
+            </div>
           </motion.div>
         </div>
       </section>
