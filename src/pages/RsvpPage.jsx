@@ -31,6 +31,10 @@ function formatRsvpDeadline(deadline) {
   }).format(new Date(Date.UTC(year, month - 1, day)))
 }
 
+function formatEventDate(date) {
+  return formatRsvpDeadline(date)
+}
+
 function dressCodeLink({ sangeetInvited, ceremonyInvited, receptionInvited }) {
   const events = [
     sangeetInvited && 'sangeet',
@@ -276,7 +280,7 @@ function ChildCounter({ label, count, max, enabled, guestName, onChange }) {
   )
 }
 
-function GuestCard({ guest, onChange }) {
+function GuestCard({ guest, onChange, portMacquarieReceptionDate }) {
   const sangeetInvited = guest.sangeetInvited !== false
   const ceremonyInvited = guest.ceremonyInvited !== false
   const receptionInvited = guest.receptionInvited !== false
@@ -368,7 +372,11 @@ function GuestCard({ guest, onChange }) {
       {portMacquarieReceptionInvited && (
         <div className="border-t border-gold/15 pt-5">
           <label className={labelClass}>Port Macquarie Reception</label>
-          <p className="mb-3 font-sans text-[12px] font-light text-ink/50">Private reception details will be shared separately.</p>
+          <p className="mb-3 font-sans text-[12px] font-light text-ink/50">
+            {portMacquarieReceptionDate
+              ? `Saturday, ${formatEventDate(portMacquarieReceptionDate)} · Port Macquarie`
+              : 'Private reception details will be shared separately.'}
+          </p>
           <div className="grid max-w-sm grid-cols-2 gap-3">
             <AttendanceButton selected={guest.portMacquarieReceptionAttending === true} onClick={() => onChange({ ...guest, portMacquarieReceptionAttending: true })}>Yes</AttendanceButton>
             <AttendanceButton selected={guest.portMacquarieReceptionAttending === false} onClick={() => onChange({ ...guest, portMacquarieReceptionAttending: false, portMacquarieReceptionChildrenCount: 0 })}>No</AttendanceButton>
@@ -752,6 +760,7 @@ export default function RsvpPage() {
                 <GuestCard
                   key={guest.id}
                   guest={guest}
+                  portMacquarieReceptionDate={group.portMacquarieReceptionDate}
                   onChange={updated => setGuests(current =>
                     current.map(item => item.id === updated.id ? updated : item)
                   )}

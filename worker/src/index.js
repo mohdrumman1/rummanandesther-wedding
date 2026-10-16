@@ -1,6 +1,8 @@
 const JSON_HEADERS = { 'content-type': 'application/json; charset=utf-8' };
 const NO_STORE_HEADERS = { 'cache-control': 'no-store' };
 const RSVP_DEADLINE = '2026-08-31';
+const PORT_MACQUARIE_RSVP_DEADLINE = '2026-11-30';
+const PORT_MACQUARIE_RECEPTION_DATE = '2027-01-02';
 
 function json(data, status = 200, extraHeaders = {}) {
   return new Response(JSON.stringify(data), {
@@ -102,6 +104,8 @@ function guestRow(row) {
 }
 
 function groupRow(row, guests = [], notes = null) {
+  const mappedGuests = guests.map(guestRow);
+  const hasPortMacquarieReception = mappedGuests.some(guest => guest.portMacquarieReceptionInvited);
   return {
     id: row.id,
     householdName: row.household_name,
@@ -109,13 +113,14 @@ function groupRow(row, guests = [], notes = null) {
     plusOneLimit: row.plus_one_limit,
     mostLikelyNotComing: row.most_likely_not_coming === 1,
     notes: row.notes || '',
-    guests: guests.map(guestRow),
+    guests: mappedGuests,
     rsvp: {
       dietaryRequirements: notes?.dietary_requirements || '',
       message: notes?.message || '',
       submittedAt: notes?.submitted_at || null,
     },
-    rsvpDeadline: RSVP_DEADLINE,
+    rsvpDeadline: hasPortMacquarieReception ? PORT_MACQUARIE_RSVP_DEADLINE : RSVP_DEADLINE,
+    ...(hasPortMacquarieReception ? { portMacquarieReceptionDate: PORT_MACQUARIE_RECEPTION_DATE } : {}),
   };
 }
 
@@ -159,6 +164,7 @@ function publicRsvpGroup(group) {
       submittedAt: null,
     },
     rsvpDeadline: group.rsvpDeadline,
+    ...(group.portMacquarieReceptionDate ? { portMacquarieReceptionDate: group.portMacquarieReceptionDate } : {}),
   };
 }
 
