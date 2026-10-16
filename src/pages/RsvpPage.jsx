@@ -375,6 +375,9 @@ function GuestCard({ guest, onChange }) {
           </div>
           {guest.childrenAllowed && (
             <div className="mt-5">
+              <p className="mb-3 font-sans text-[12px] font-light text-ink/50">
+                {guest.maxChildren} child{guest.maxChildren === 1 ? '' : 'ren'} included in this invitation.
+              </p>
               <ChildCounter label="Children attending Port Macquarie Reception" count={guest.portMacquarieReceptionChildrenCount || 0}
                 max={guest.maxChildren} enabled={guest.portMacquarieReceptionAttending === true} guestName={guest.name}
                 onChange={count => onChange({ ...guest, portMacquarieReceptionChildrenCount: count })} />

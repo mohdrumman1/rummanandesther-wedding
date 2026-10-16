@@ -133,7 +133,9 @@ function publicGuestRow(guest) {
     childrenCount: 0,
     ceremonyChildrenCount: 0,
     receptionChildrenCount: 0,
-    portMacquarieReceptionChildrenCount: 0,
+    // The Port Macquarie list provides the children included in each invitation.
+    // Prefill this count so invitees see their allocation before responding.
+    portMacquarieReceptionChildrenCount: guest.portMacquarieReceptionInvited ? guest.maxChildren : 0,
     sangeetAttending: null,
     ceremonyAttending: null,
     receptionAttending: null,
