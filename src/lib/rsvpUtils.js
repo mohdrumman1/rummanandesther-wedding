@@ -51,7 +51,9 @@ export function rsvpCounts(groups) {
   return groups.reduce((counts, group) => {
     const status = groupStatus(group)
     const guests = group.guests || []
-    const namedGuestCount = guests.filter(guest => !guest.isAdditional).length
+    const namedGuestCount = guests
+      .filter(guest => !guest.isAdditional)
+      .reduce((total, guest) => total + Number(guest.adultCount || 1), 0)
     const submittedAdditionalGuests = guests.filter(guest => guest.isAdditional).length
     const additionalSpots = Number(group.plusOneLimit || 0)
     counts.namedGuests += namedGuestCount

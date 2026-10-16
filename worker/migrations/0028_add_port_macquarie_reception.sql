@@ -3,6 +3,7 @@
 ALTER TABLE guests ADD COLUMN port_macquarie_reception_invited INTEGER NOT NULL DEFAULT 0;
 ALTER TABLE guests ADD COLUMN port_macquarie_reception_attending INTEGER;
 ALTER TABLE guests ADD COLUMN port_macquarie_reception_children_count INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE guests ADD COLUMN adult_count INTEGER NOT NULL DEFAULT 1;
 
 INSERT INTO guest_groups (id, household_name, access_code, plus_one_limit, notes) VALUES
   ('grp_pm_01', 'Dr Mohan Vattekad and Prema Mohan', 'PMR6J4V8K2Q7W9X3AB', 0, 'Private Port Macquarie reception: 2 adults'),
@@ -52,9 +53,10 @@ INSERT INTO guest_groups (id, household_name, access_code, plus_one_limit, notes
   ('grp_pm_56', 'Father George', 'Z6P2H9M4T7K3V8D5QF', 0, 'Private Port Macquarie reception: 1 adult'),
   ('grp_pm_57', 'Dr Ali Zameel and Dr Aysha Thasneem', 'R3Y7C5N8L2F9W4G6XH', 0, 'Private Port Macquarie reception: 2 adults, 2 children');
 
-INSERT INTO guests (id, group_id, name, is_primary, children_allowed, max_children, sangeet_invited, ceremony_invited, reception_invited, port_macquarie_reception_invited, sort_order)
+INSERT INTO guests (id, group_id, name, is_primary, children_allowed, max_children, adult_count, sangeet_invited, ceremony_invited, reception_invited, port_macquarie_reception_invited, sort_order)
 SELECT 'gst_pm_' || substr(id, 8), id, household_name, 1,
   CASE WHEN notes GLOB '*child*' THEN 1 ELSE 0 END,
   CASE WHEN notes LIKE '%3 children%' THEN 3 WHEN notes LIKE '%2 children%' THEN 2 WHEN notes LIKE '%1 child%' THEN 1 ELSE 0 END,
+  CASE WHEN notes LIKE '%4 adults%' THEN 4 WHEN notes LIKE '%2 adults%' THEN 2 ELSE 1 END,
   0, 0, 0, 1, 0
 FROM guest_groups WHERE id LIKE 'grp_pm_%';

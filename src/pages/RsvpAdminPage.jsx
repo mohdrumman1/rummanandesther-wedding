@@ -42,6 +42,7 @@ function statusClass(status) {
 }
 
 const pluralizeGuests = count => `${count} guest${count === 1 ? '' : 's'}`
+const pluralizeAdults = count => `${count} adult${count === 1 ? '' : 's'}`
 
 function LoginPanel({ onLogin }) {
   const [username, setUsername] = useState('')
@@ -451,10 +452,14 @@ function GroupTable({ groups, filter, onEdit, onDelete, readOnly, canCopyInvites
               const ceremonyYes = group.summary?.ceremonyYes ?? group.guests.filter(guest => guest.ceremonyAttending === true).length
               const receptionYes = group.summary?.receptionYes ?? group.guests.filter(guest => guest.receptionAttending === true).length
               const inviteLink = canCopyInvites ? buildInviteLink(group.accessCode) : ''
-              const namedGuestCount = group.guests.filter(guest => !guest.isAdditional).length
+              const namedGuestCount = group.guests
+                .filter(guest => !guest.isAdditional)
+                .reduce((total, guest) => total + Number(guest.adultCount || 1), 0)
+              const childrenCapacity = group.guests
+                .filter(guest => !guest.isAdditional)
+                .reduce((total, guest) => total + Number(guest.maxChildren || 0), 0)
               const submittedAdditionalGuests = group.guests.filter(guest => guest.isAdditional).length
               const additionalSpots = Number(group.plusOneLimit || 0)
-              const totalGuestCapacity = namedGuestCount + additionalSpots
               const remainingAdditionalSpots = Math.max(0, additionalSpots - submittedAdditionalGuests)
               return (
                 <tr key={group.id} className="border-b border-gold/10 align-top">
@@ -468,7 +473,12 @@ function GroupTable({ groups, filter, onEdit, onDelete, readOnly, canCopyInvites
                     </span>
                   </td>
                   <td className="px-4 py-5 font-sans text-[13px] text-ink/60">
-                    <p>{pluralizeGuests(totalGuestCapacity)}</p>
+                    <p>{pluralizeAdults(namedGuestCount)}{additionalSpots > 0 ? ` + ${pluralizeGuests(additionalSpots)}` : ''}</p>
+                    {childrenCapacity > 0 && (
+                      <p className="mt-1 text-[12px] text-ink/40">
+                        {childrenCapacity} child{childrenCapacity === 1 ? '' : 'ren'} invited
+                      </p>
+                    )}
                     {additionalSpots > 0 && (
                       <p className="mt-1 text-[12px] text-ink/40">
                         {pluralizeGuests(namedGuestCount)} named + {additionalSpots} additional spot{additionalSpots === 1 ? '' : 's'}
