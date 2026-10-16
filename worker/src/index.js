@@ -689,6 +689,8 @@ function readOnlyGroup(group, { includeInviteAccess = false } = {}) {
       sangeetAttending: null,
       ceremonyAttending: null,
       receptionAttending: null,
+      portMacquarieReceptionAttending: null,
+      portMacquarieReceptionInvited: guest.portMacquarieReceptionInvited,
       childrenCount: 0,
     })),
   };
@@ -727,9 +729,9 @@ async function handleAdminGroupCreate(request, env) {
     INSERT INTO guests (
       id, group_id, name, is_primary, is_partner, is_additional,
       primary_guest_id, children_allowed, max_children,
-      sangeet_invited, ceremony_invited, reception_invited, sort_order
+      sangeet_invited, ceremony_invited, reception_invited, port_macquarie_reception_invited, sort_order
     )
-    VALUES (?, ?, ?, ?, ?, 0, NULL, ?, ?, ?, ?, ?, ?)
+    VALUES (?, ?, ?, ?, ?, 0, NULL, ?, ?, ?, ?, ?, ?, ?)
   `).bind(
     randomId('gst_'),
     groupId,
@@ -741,6 +743,7 @@ async function handleAdminGroupCreate(request, env) {
     guest.sangeetInvited === false ? 0 : 1,
     guest.ceremonyInvited === false ? 0 : 1,
     guest.receptionInvited === false ? 0 : 1,
+    guest.portMacquarieReceptionInvited === true ? 1 : 0,
     index,
   )).filter((_, index) => normalizeName(guests[index]?.name));
   if (statements.length) await env.DB.batch(statements);
@@ -755,12 +758,12 @@ async function replaceGroupGuests(env, groupId, guests) {
     .map(({ guest, name, index }) => env.DB.prepare(`
       INSERT INTO guests (
         id, group_id, name, is_primary, is_partner, is_additional,
-        primary_guest_id, children_allowed, max_children, children_count,
-        ceremony_children_count, reception_children_count,
-        sangeet_attending, ceremony_attending, reception_attending,
-        sangeet_invited, ceremony_invited, reception_invited, sort_order
+        primary_guest_id, children_allowed, max_children, adult_count, children_count,
+        ceremony_children_count, reception_children_count, port_macquarie_reception_children_count,
+        sangeet_attending, ceremony_attending, reception_attending, port_macquarie_reception_attending,
+        sangeet_invited, ceremony_invited, reception_invited, port_macquarie_reception_invited, sort_order
       )
-      VALUES (?, ?, ?, ?, ?, ?, NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).bind(
       guest.id || randomId('gst_'),
       groupId,
@@ -770,15 +773,19 @@ async function replaceGroupGuests(env, groupId, guests) {
       guest.isAdditional ? 1 : 0,
       guest.childrenAllowed ? 1 : 0,
       Math.max(0, Number(guest.maxChildren || 0)),
+      Math.max(1, Number(guest.adultCount || 1)),
       guest.childrenAllowed ? Math.max(0, Number(guest.childrenCount || 0)) : 0,
       guest.childrenAllowed ? Math.max(0, Number(guest.ceremonyChildrenCount ?? guest.childrenCount ?? 0)) : 0,
       guest.childrenAllowed ? Math.max(0, Number(guest.receptionChildrenCount ?? guest.childrenCount ?? 0)) : 0,
+      guest.childrenAllowed ? Math.max(0, Number(guest.portMacquarieReceptionChildrenCount || 0)) : 0,
       boolToDb(guest.sangeetAttending),
       boolToDb(guest.ceremonyAttending),
       boolToDb(guest.receptionAttending),
+      boolToDb(guest.portMacquarieReceptionAttending),
       guest.sangeetInvited === false ? 0 : 1,
       guest.ceremonyInvited === false ? 0 : 1,
       guest.receptionInvited === false ? 0 : 1,
+      guest.portMacquarieReceptionInvited === true ? 1 : 0,
       index,
     ));
   if (statements.length) await env.DB.batch(statements);
@@ -879,6 +886,9 @@ async function handleAdminImport(request, env) {
       receptionInvited: idx('reception_invited') === -1
         ? true
         : !/^(no|false|0)$/i.test(row[idx('reception_invited')] || 'yes'),
+      portMacquarieReceptionInvited: idx('port_macquarie_reception_invited') === -1
+        ? false
+        : /^(yes|true|1)$/i.test(row[idx('port_macquarie_reception_invited')] || ''),
     });
     grouped.set(household, group);
   });
@@ -925,9 +935,11 @@ async function handleAdminExport(env) {
     'sangeet_invited',
     'ceremony_invited',
     'reception_invited',
+    'port_macquarie_reception_invited',
     'sangeet',
     'ceremony',
     'reception',
+    'port_macquarie_reception',
     'ceremony_children',
     'reception_children',
     'dietary',
@@ -955,9 +967,11 @@ async function handleAdminExport(env) {
         guest.sangeetInvited ? 'yes' : 'no',
         guest.ceremonyInvited ? 'yes' : 'no',
         guest.receptionInvited ? 'yes' : 'no',
+        guest.portMacquarieReceptionInvited ? 'yes' : 'no',
         guest.sangeetAttending === null ? 'pending' : guest.sangeetAttending ? 'yes' : 'no',
         guest.ceremonyAttending === null ? 'pending' : guest.ceremonyAttending ? 'yes' : 'no',
         guest.receptionAttending === null ? 'pending' : guest.receptionAttending ? 'yes' : 'no',
+        guest.portMacquarieReceptionAttending === null ? 'pending' : guest.portMacquarieReceptionAttending ? 'yes' : 'no',
         guest.ceremonyChildrenCount,
         guest.receptionChildrenCount,
         group.rsvp.dietaryRequirements,
@@ -980,6 +994,8 @@ async function handleAdminExport(env) {
         '',
         '',
         '',
+        '',
+        'pending',
         'pending',
         'pending',
         'pending',

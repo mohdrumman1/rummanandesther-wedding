@@ -229,6 +229,15 @@ function GuestEditor({ guests, setGuests }) {
               />
               Invited to Reception
             </label>
+            <label className="flex items-center gap-2 font-sans text-[12px] text-ink/60">
+              <input
+                type="checkbox"
+                checked={guest.portMacquarieReceptionInvited === true}
+                onChange={event => updateGuest(index, { portMacquarieReceptionInvited: event.target.checked })}
+                className="accent-burgundy"
+              />
+              Invited to Port Reception
+            </label>
           </div>
           {guest.childrenAllowed && (
             <div className="max-w-xs">
@@ -394,14 +403,14 @@ function CsvImport({ onImported }) {
       <div>
         <h2 className="font-serif text-3xl font-light text-ink">CSV Import</h2>
         <p className="mt-2 font-sans text-[12px] text-ink/45 font-light leading-relaxed">
-          Columns: household, guest, plus_one_limit, most_likely_not_coming, partner, children_allowed, max_children, sangeet_invited, ceremony_invited, reception_invited, notes.
+          Columns: household, guest, plus_one_limit, most_likely_not_coming, partner, children_allowed, max_children, sangeet_invited, ceremony_invited, reception_invited, port_macquarie_reception_invited, notes.
         </p>
       </div>
       <textarea
         value={csv}
         onChange={event => setCsv(event.target.value)}
         rows={7}
-        placeholder={'household,guest,plus_one_limit,most_likely_not_coming,partner,children_allowed,max_children,sangeet_invited,ceremony_invited,reception_invited,notes\nAhmed Family,Amina Ahmed,1,no,false,true,2,yes,yes,yes,\nAhmed Family,Omar Ahmed,1,no,true,false,0,yes,yes,yes,'}
+        placeholder={'household,guest,plus_one_limit,most_likely_not_coming,partner,children_allowed,max_children,sangeet_invited,ceremony_invited,reception_invited,port_macquarie_reception_invited,notes\nAhmed Family,Amina Ahmed,1,no,false,true,2,yes,yes,yes,no,\nAhmed Family,Omar Ahmed,1,no,true,false,0,yes,yes,yes,no,'}
         className={`${inputClass} resize-none font-mono text-[12px]`}
       />
       {status && <p className="font-sans text-[13px] text-ink/60">{status}</p>}
@@ -428,7 +437,7 @@ function GroupTable({ groups, filter, onEdit, onDelete, readOnly, canCopyInvites
     }
     return groupStatus(group) === filter
   })
-  const headings = ['Household', 'Status', 'Seats', 'Most likely not coming', 'Sangeet', 'Ceremony', 'Reception']
+  const headings = ['Household', 'Status', 'Seats', 'Most likely not coming', 'Sangeet', 'Ceremony', 'Reception', 'Port Reception']
   if (canCopyInvites) headings.push('Invite Link')
   if (!readOnly) headings.push('Actions')
 
@@ -451,6 +460,10 @@ function GroupTable({ groups, filter, onEdit, onDelete, readOnly, canCopyInvites
               const sangeetYes = group.summary?.sangeetYes ?? group.guests.filter(guest => guest.sangeetAttending === true).length
               const ceremonyYes = group.summary?.ceremonyYes ?? group.guests.filter(guest => guest.ceremonyAttending === true).length
               const receptionYes = group.summary?.receptionYes ?? group.guests.filter(guest => guest.receptionAttending === true).length
+              const portReceptionYes = group.summary?.portMacquarieReceptionYes ?? group.guests.filter(guest => guest.portMacquarieReceptionAttending === true).length
+              const portReceptionPending = group.guests.some(guest =>
+                guest.portMacquarieReceptionInvited === true && guest.portMacquarieReceptionAttending === null
+              )
               const inviteLink = canCopyInvites ? buildInviteLink(group.accessCode) : ''
               const namedGuestCount = group.guests
                 .filter(guest => !guest.isAdditional)
@@ -510,6 +523,9 @@ function GroupTable({ groups, filter, onEdit, onDelete, readOnly, canCopyInvites
                   </td>
                   <td className="px-4 py-5 font-sans text-[13px] text-ink/60">
                     {receptionYes} yes
+                  </td>
+                  <td className="px-4 py-5 font-sans text-[13px] text-ink/60">
+                    {portReceptionPending ? 'Pending' : `${portReceptionYes} yes`}
                   </td>
                   {canCopyInvites && <td className="px-4 py-5">
                     <div className="flex flex-wrap gap-3">
@@ -647,6 +663,7 @@ export default function RsvpAdminPage() {
                 ['Sangeet Yes', counts.sangeetYes],
                 ['Ceremony Yes', counts.ceremonyYes],
                 ['Reception Yes', counts.receptionYes],
+                ['Port Reception Yes', counts.portMacquarieReceptionYes],
               ].map(([label, value]) => (
                 <div key={label} className="border border-gold/25 bg-white px-5 py-4">
                   <p className="font-sans text-[10px] tracking-ultra uppercase text-ink/40">{label}</p>
