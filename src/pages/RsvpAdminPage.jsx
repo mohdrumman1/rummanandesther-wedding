@@ -420,7 +420,13 @@ function copyInviteMessage(group, inviteLink) {
 }
 
 function GroupTable({ groups, filter, onEdit, onDelete, readOnly, canCopyInvites }) {
-  const filtered = groups.filter(group => filter === 'all' || groupStatus(group) === filter)
+  const filtered = groups.filter(group => {
+    if (filter === 'all') return true
+    if (filter === 'port-macquarie-reception') {
+      return group.guests.some(guest => guest.portMacquarieReceptionInvited === true)
+    }
+    return groupStatus(group) === filter
+  })
   const headings = ['Household', 'Status', 'Seats', 'Most likely not coming', 'Sangeet', 'Ceremony', 'Reception']
   if (canCopyInvites) headings.push('Invite Link')
   if (!readOnly) headings.push('Actions')
@@ -701,6 +707,7 @@ export default function RsvpAdminPage() {
                   ['partial', 'Partial'],
                   ['complete', 'Complete'],
                   ['empty', 'No Guests'],
+                  ['port-macquarie-reception', 'Port Reception'],
                 ].map(([value, label]) => (
                   <button
                     key={value}
