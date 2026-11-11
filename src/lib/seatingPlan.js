@@ -39,7 +39,7 @@ export const NAME_LINKS = {
   suzy: 'Susymamma',
   maree: 'Mareena',
   ekta: 'Ekta',
-  shahinaz: 'Shahinaz',
+  shahinaz: 'Shahi|Dr Azeem & Shahi',
   saleem: 'Dr Saleem Lathif',
   shafeela: 'Dr Shafeela',
   nifri: 'Nifri',
@@ -64,6 +64,7 @@ const nameKey = text => String(text || '').toLowerCase().replace(/[^a-z0-9]+/g, 
 
 // Guests the first table list matched to the wrong person; they are swapped for the right one.
 export const NAME_FIXES = {
+  shahinaz: 'Shahi|Dr Azeem & Shahi',
   'shimmy chatterjee': 'Alice|George & Alice',
   'aaron atty': 'Dr Sharon',
   'alex yan': 'Dr Alex Thomas',
@@ -77,16 +78,19 @@ export function linkHandAdded(plan, guests) {
   const invited = guests.filter(g => !g.custom)
   const entries = [
     ...plan.customGuests.map(c => ({ id: c.id, name: c.name, target: NAME_LINKS[nameKey(c.name)] || c.name, custom: true })),
+    // Shahinaz was added as a new guest by mistake (she is Shahi); her seat may outlive the guest row.
+    ...(plan.assignments.gst_shahinaz && !invited.some(g => g.id === 'gst_shahinaz') ? [{ id: 'gst_shahinaz', name: 'Shahinaz', target: NAME_FIXES.shahinaz }] : []),
     ...invited.filter(g => NAME_FIXES[nameKey(g.name)] && plan.assignments[g.id]).map(g => ({ id: g.id, name: g.name, target: NAME_FIXES[nameKey(g.name)] })),
   ]
   entries.forEach(entry => {
     const [targetName, targetHousehold] = entry.target.split('|')
     const hits = invited.filter(g => nameKey(g.name) === nameKey(targetName) && (!targetHousehold || g.household === targetHousehold))
-    if (hits.length !== 1 || next.assignments[hits[0].id]) return skipped.push(entry.name)
+    if (hits.length !== 1) return skipped.push(entry.name)
     const guest = hits[0]
     const assignments = { ...next.assignments }
     const seat = assignments[entry.id]
     delete assignments[entry.id]
+    delete assignments[guest.id] // already seated elsewhere: move them
     if (seat) assignments[guest.id] = seat
     next = { ...next, assignments, customGuests: entry.custom ? next.customGuests.filter(x => x.id !== entry.id) : next.customGuests }
     linked.push(`${entry.name} → ${guest.name}`)
