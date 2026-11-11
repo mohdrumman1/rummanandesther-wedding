@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
 import PageHeader from '../components/PageHeader'
+import SeatingPlanner from '../components/SeatingPlanner'
+import '../seatingApple.css'
 import {
   adminLogin,
   buildInviteLink,
@@ -579,6 +581,7 @@ export default function RsvpAdminPage() {
   const [groups, setGroups] = useState([])
   const [activeGroup, setActiveGroup] = useState(null)
   const [filter, setFilter] = useState('all')
+  const [view, setView] = useState('guests')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -710,7 +713,24 @@ export default function RsvpAdminPage() {
             </div>
           )}
 
-          <div className={`grid gap-8 ${readOnly ? '' : 'lg:grid-cols-[420px_1fr]'}`}>
+          {!readOnly && (
+            <div className="sp-seg-wrap">
+              <div className="sp-seg" style={{ '--i': view === 'seating' ? 1 : 0 }}>
+                {[
+                  ['guests', 'Guests & RSVPs'],
+                  ['seating', 'Seating Plan'],
+                ].map(([value, label]) => (
+                  <button key={value} type="button" aria-pressed={view === value} onClick={() => setView(value)}>
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {view === 'seating' && !readOnly && <SeatingPlanner groups={groups} />}
+
+          <div className={`grid gap-8 ${readOnly ? '' : 'lg:grid-cols-[420px_1fr]'} ${view === 'seating' && !readOnly ? 'hidden' : ''}`}>
             {!readOnly && (
               <div className="space-y-8 lg:sticky lg:top-24 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto lg:pb-4">
                 <GroupForm

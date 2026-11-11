@@ -35,3 +35,6 @@ party-invite-joy/
 
 # Local docs — never committed
 .local-docs/
+
+# Venue documents (guest dietary/allergy data, phone numbers, booking refs): keep local
+docs/venue/

@@ -1,0 +1,226 @@
+/* Apple-style skin (warm cream, white cards, burgundy tint to match the site) for the admin seating planner. Scoped to .sp so the rest of the wedding site keeps its look. */
+.sp {
+  --accent: #722f37;
+  --on-accent: #fff;
+  --bg: #f1e8d9;
+  --fg: #2a1f1a;
+  --muted: #6b5a52;
+  --line: rgb(114 47 55 / 0.12);
+  --field: #8a7468;
+  --card: #fff;
+  --raised: var(--card);
+  --fill: rgb(114 47 55 / 0.08);
+  --seg: #fff;
+  --tint: color-mix(in srgb, var(--accent) 9%, var(--card));
+  --elev: 0 1px 1px rgb(74 30 36 / 0.04), 0 2px 8px rgb(74 30 36 / 0.05);
+  --shadow: 0 4px 12px rgb(74 30 36 / 0.08), 0 18px 40px rgb(74 30 36 / 0.14);
+  --ease: cubic-bezier(0.32, 0.72, 0, 1);
+
+  font: 15px/1.47 -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, 'Segoe UI', Roboto, sans-serif;
+  letter-spacing: -0.01em;
+  font-optical-sizing: auto;
+  -webkit-font-smoothing: antialiased;
+  color: var(--fg);
+  background: var(--bg);
+  border-radius: 22px;
+  padding: 20px;
+  animation: sp-in 0.4s var(--ease) both;
+}
+
+@keyframes sp-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes sp-pop {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes sp-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.sp *, .sp *::before, .sp *::after { box-sizing: border-box; }
+.sp h2 { margin: 0; font-size: 19px; line-height: 1.2; letter-spacing: -0.016em; font-weight: 600; }
+.sp label { font-size: 13px; font-weight: 500; letter-spacing: 0; color: var(--muted); }
+
+/* ----- cards ----- */
+.sp-card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  box-shadow: var(--elev);
+  padding: 16px;
+  transition: box-shadow 0.4s var(--ease), transform 0.4s var(--ease);
+}
+.sp-card.sp-pop { animation: sp-pop 0.35s var(--ease) both; }
+.sp-canvas { padding: 8px; overflow: hidden; }
+.sp-canvas svg { border-radius: 12px; }
+
+/* ----- buttons ----- */
+.sp-btn {
+  font: 500 13px/1 inherit;
+  font-family: inherit;
+  letter-spacing: -0.005em;
+  min-height: 32px;
+  padding: 0 14px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: var(--fill);
+  color: var(--fg);
+  cursor: pointer;
+  transition: background-color 0.35s var(--ease), color 0.35s var(--ease), opacity 0.35s var(--ease), transform 0.35s var(--ease);
+}
+.sp-btn:hover:not(:disabled) { background: color-mix(in srgb, var(--fg) 14%, transparent); }
+.sp-btn:active:not(:disabled) { transform: scale(0.97); transition-duration: 0s; }
+.sp-btn:disabled { opacity: 0.4; cursor: default; }
+.sp-btn.sp-primary { background: var(--accent); color: var(--on-accent); }
+.sp-btn.sp-primary:hover:not(:disabled) { background: color-mix(in srgb, var(--accent) 88%, var(--fg)); }
+.sp-btn.sp-tint { background: var(--tint); color: var(--accent); }
+.sp-btn:focus-visible, .sp-input:focus-visible, .sp-seg button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* ----- inputs ----- */
+.sp-input {
+  width: 100%;
+  min-height: 36px;
+  padding: 0 12px;
+  font: inherit;
+  font-size: 15px;
+  color: var(--fg);
+  background: var(--card);
+  border: 1px solid var(--field);
+  border-radius: 10px;
+  transition: border-color 0.35s var(--ease), box-shadow 0.35s var(--ease);
+}
+.sp-input::placeholder { color: var(--muted); }
+.sp-input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent); }
+.sp input[type='checkbox'] { accent-color: var(--accent); width: 16px; height: 16px; }
+.sp-check { display: flex; align-items: center; gap: 8px; color: var(--fg) !important; }
+
+/* ----- toolbar: translucent, sticky ----- */
+.sp-bar {
+  position: sticky;
+  top: 8px;
+  z-index: 20;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--card) 72%, transparent);
+  -webkit-backdrop-filter: saturate(1.8) blur(20px);
+  backdrop-filter: saturate(1.8) blur(20px);
+  box-shadow: 0 0 0 1px var(--line);
+}
+.sp-status { margin-left: auto; font-size: 12px; color: var(--muted); transition: opacity 0.35s var(--ease); min-width: 5.5em; text-align: right; }
+
+/* ----- guest list ----- */
+.sp-guest {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: var(--fill);
+  cursor: grab;
+  user-select: none;
+  animation: sp-fade 0.35s var(--ease) both;
+  transition: background-color 0.35s var(--ease), transform 0.35s var(--ease);
+}
+.sp-guest:hover { background: color-mix(in srgb, var(--fg) 14%, transparent); }
+.sp-guest:active { transform: scale(0.99); transition-duration: 0s; }
+.sp-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); margin-right: 6px; vertical-align: middle; }
+.sp-badge { font-size: 11px; font-weight: 600; letter-spacing: 0.02em; padding: 2px 8px; border-radius: 999px; background: var(--tint); color: var(--accent); white-space: nowrap; }
+.sp-eyebrow { font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+.sp-hint { font-size: 12px; color: var(--muted); }
+
+/* ----- canvas motion: tables glide, seats cross-fade ----- */
+.sp-tbl { transition: transform 0.4s var(--ease); }
+.sp-tbl.sp-dragging { transition: none; }
+.sp-fill { transition: fill 0.35s var(--ease), stroke 0.35s var(--ease), stroke-width 0.35s var(--ease), opacity 0.35s var(--ease); }
+.sp-label { animation: sp-fade 0.35s var(--ease) both; }
+
+/* ----- segmented control (view switch) ----- */
+.sp-seg {
+  --n: 2;
+  position: relative;
+  display: inline-grid;
+  grid-template-columns: repeat(var(--n), 1fr);
+  padding: 2px;
+  border-radius: 9px;
+  background: var(--fill);
+  font: 13px/1 -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif;
+}
+.sp-seg::before {
+  content: '';
+  position: absolute;
+  top: 2px;
+  bottom: 2px;
+  left: 2px;
+  width: calc((100% - 4px) / var(--n));
+  border-radius: 7px;
+  background: var(--seg);
+  box-shadow: 0 3px 8px rgb(0 0 0 / 0.12), 0 3px 1px rgb(0 0 0 / 0.04);
+  transform: translateX(calc(var(--i) * 100%));
+  transition: transform 0.4s var(--ease);
+}
+.sp-seg button {
+  position: relative;
+  min-height: 28px;
+  padding: 0 16px;
+  border: 0;
+  background: none;
+  border-radius: 7px;
+  font: inherit;
+  font-weight: 500;
+  color: var(--muted, #6b5a52);
+  cursor: pointer;
+  transition: color 0.35s var(--ease);
+}
+.sp-seg button[aria-pressed='true'] { color: var(--fg, #2a1f1a); font-weight: 600; }
+.sp-seg-wrap {
+  --fg: #2a1f1a; --muted: #6b5a52; --fill: rgb(114 47 55 / 0.08); --seg: #fff; --accent: #722f37;
+}
+
+/* ----- drag ghost ----- */
+.sp-ghost {
+  pointer-events: none;
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 50;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 500;
+  background: var(--accent);
+  color: var(--on-accent);
+  box-shadow: var(--shadow);
+  animation: sp-pop 0.25s var(--ease) both;
+}
+
+/* ----- touch: Apple's 44pt floor, 16px inputs so iOS does not zoom ----- */
+@media (pointer: coarse) {
+  .sp input, .sp select, .sp textarea, .sp button { min-height: 44px; font-size: 16px; }
+  .sp-seg button { min-height: 44px; }
+  .sp input[type='checkbox'] { min-height: 0; width: 22px; height: 22px; }
+}
+
+/* ----- accessibility fallbacks ----- */
+@media (prefers-reduced-transparency: reduce) {
+  .sp-bar { background: var(--card); -webkit-backdrop-filter: none; backdrop-filter: none; }
+}
+@media (prefers-contrast: more) {
+  .sp { --line: var(--field) !important; }
+  .sp-bar { background: var(--card); -webkit-backdrop-filter: none; backdrop-filter: none; }
+}
+@media (forced-colors: active) {
+  .sp-btn { border-color: ButtonText; }
+  .sp-seg button[aria-pressed='true'] { border: 1px solid Highlight; text-decoration: underline; }
+  .sp-card, .sp-bar { border: 1px solid CanvasText; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sp, .sp *, .sp *::before, .sp *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}

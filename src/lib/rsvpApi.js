@@ -126,6 +126,21 @@ export async function exportAdminCsv() {
   return parseResponse(res)
 }
 
+export async function fetchSeatingPlan() {
+  return request(`/api/admin/seating?t=${Date.now()}`, {
+    cache: 'no-store',
+    headers: adminHeaders(),
+  })
+}
+
+export async function saveSeatingPlan(plan) {
+  return request('/api/admin/seating', {
+    method: 'PUT',
+    headers: adminHeaders(),
+    body: JSON.stringify({ plan }),
+  })
+}
+
 export function buildInviteLink(accessCode) {
   return `${window.location.origin}/rsvp/${accessCode}`
 }

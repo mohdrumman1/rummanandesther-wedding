@@ -29,7 +29,7 @@ function corsHeaders(request, env) {
   const origin = allowedOrigin(request, env);
   return {
     ...(origin ? { 'access-control-allow-origin': origin } : {}),
-    'access-control-allow-methods': 'GET,POST,PATCH,DELETE,OPTIONS',
+    'access-control-allow-methods': 'GET,POST,PUT,PATCH,DELETE,OPTIONS',
     'access-control-allow-headers': 'content-type,authorization',
     'access-control-max-age': '86400',
     vary: 'Origin',
@@ -1024,6 +1024,26 @@ async function handleAdminExport(env) {
   });
 }
 
+async function handleSeatingGet(env) {
+  const row = await env.DB.prepare("SELECT data FROM seating_plans WHERE id = 'main'").first();
+  return json({ plan: row ? JSON.parse(row.data) : null }, 200, NO_STORE_HEADERS);
+}
+
+async function handleSeatingPut(request, env) {
+  const body = await readJson(request);
+  const plan = body?.plan;
+  if (!plan || !Array.isArray(plan.tables) || typeof plan.assignments !== 'object') {
+    return json({ error: 'A seating plan is required.' }, 400);
+  }
+  const data = JSON.stringify(plan);
+  if (data.length > 500000) return json({ error: 'Seating plan is too large.' }, 413);
+  await env.DB.prepare(`
+    INSERT INTO seating_plans (id, data, updated_at) VALUES ('main', ?, CURRENT_TIMESTAMP)
+    ON CONFLICT(id) DO UPDATE SET data = excluded.data, updated_at = CURRENT_TIMESTAMP
+  `).bind(data).run();
+  return json({ ok: true });
+}
+
 async function route(request, env) {
   const url = new URL(request.url);
   const method = request.method;
@@ -1048,6 +1068,8 @@ async function route(request, env) {
     if (parts[2] === 'groups' && method === 'GET') return handleAdminGroupsGet(env, session);
     if (session.role !== 'admin') return json({ error: 'Read-only access cannot change invitees.' }, 403);
     if (parts[2] === 'export' && method === 'GET') return handleAdminExport(env);
+    if (parts[2] === 'seating' && method === 'GET') return handleSeatingGet(env);
+    if (parts[2] === 'seating' && method === 'PUT') return handleSeatingPut(request, env);
     if (parts[2] === 'groups' && method === 'POST') return handleAdminGroupCreate(request, env);
     if (parts[2] === 'groups' && parts[3] && method === 'PATCH') return handleAdminGroupPatch(request, env, parts[3]);
     if (parts[2] === 'groups' && parts[3] && method === 'DELETE') return handleAdminGroupDelete(env, parts[3]);
