@@ -249,6 +249,116 @@ function rsvpGuests(groups) {
   return out
 }
 
+function norm(text) {
+  return String(text || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim()
+}
+
+// One seat in the table's guest list. Empty seats autocomplete from the invite list.
+function SeatRow({ seat, guest, candidates, tableNameById, assignments, onPick, onAddCustom, onUnseat, onRename }) {
+  const [text, setText] = useState('')
+  const [open, setOpen] = useState(false)
+  const [active, setActive] = useState(0)
+  const q = norm(text)
+  const matches = useMemo(() => {
+    if (!q) return []
+    return candidates
+      .map(g => {
+        const n = norm(g.name)
+        const rank = n.startsWith(q) ? 0 : n.split(' ').some(w => w.startsWith(q)) ? 1 : n.includes(q) ? 2 : -1
+        return { g, rank }
+      })
+      .filter(m => m.rank >= 0)
+      .sort((a, b) => a.rank - b.rank || Number(Boolean(assignments[a.g.id])) - Number(Boolean(assignments[b.g.id])) || a.g.name.localeCompare(b.g.name))
+      .slice(0, 6)
+      .map(m => m.g)
+  }, [q, candidates, assignments])
+  const exact = matches.some(g => norm(g.name) === q)
+  const showAdd = q && !exact
+  const total = matches.length + (showAdd ? 1 : 0)
+
+  function choose(i) {
+    if (i < matches.length) onPick(matches[i].id)
+    else onAddCustom(text.trim())
+    setText('')
+    setOpen(false)
+    setActive(0)
+  }
+
+  function onKey(e) {
+    if (e.key === 'ArrowDown') {
+      e.preventDefault()
+      setOpen(true)
+      setActive(a => Math.min(total - 1, a + 1))
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault()
+      setActive(a => Math.max(0, a - 1))
+    } else if (e.key === 'Enter') {
+      e.preventDefault()
+      if (total) choose(Math.min(active, total - 1))
+    } else if (e.key === 'Escape') setOpen(false)
+  }
+
+  if (guest) {
+    const notInvited = Boolean(guest.custom)
+    return (
+      <li className="sp-seatrow">
+        <span className="sp-seatno">{seat + 1}</span>
+        {notInvited ? (
+          <input className="sp-input" aria-label={`Seat ${seat + 1} name`} value={guest.name} onChange={e => onRename(guest.id, e.target.value)} />
+        ) : (
+          <span className="sp-seatname">
+            {guest.name}
+            <span className="sp-hint"> · {guest.household}</span>
+          </span>
+        )}
+        {notInvited && <span className="sp-badge sp-flag" title="Not on the invite list. Add them to the guest list if they should be invited.">Not on invite list</span>}
+        {!notInvited && guest.attending === false && <span className="sp-badge sp-flag">Declined</span>}
+        {!notInvited && guest.attending == null && <span className="sp-badge">No reply</span>}
+        <button type="button" className="sp-btn" onClick={() => onUnseat(guest.id)} aria-label={`Unseat ${guest.name}`}>Unseat</button>
+      </li>
+    )
+  }
+
+  return (
+    <li className="sp-seatrow">
+      <span className="sp-seatno">{seat + 1}</span>
+      <div className="sp-ac">
+        <input
+          className="sp-input"
+          aria-label={`Seat ${seat + 1}: type a guest name`}
+          placeholder="Type a name…"
+          value={text}
+          autoComplete="off"
+          onChange={e => {
+            setText(e.target.value)
+            setOpen(true)
+            setActive(0)
+          }}
+          onFocus={() => setOpen(true)}
+          onBlur={() => setOpen(false)}
+          onKeyDown={onKey}
+        />
+        {open && total > 0 && (
+          <ul className="sp-menu" role="listbox">
+            {matches.map((g, i) => (
+              <li key={g.id} role="option" aria-selected={i === active} className={i === active ? 'sp-opt sp-on' : 'sp-opt'} onMouseDown={e => { e.preventDefault(); choose(i) }} onMouseEnter={() => setActive(i)}>
+                <span>{g.name}<span className="sp-hint"> · {g.household}</span></span>
+                {assignments[g.id] && <span className="sp-hint">at {tableNameById[assignments[g.id].tableId] || 'a table'}</span>}
+              </li>
+            ))}
+            {showAdd && (
+              <li role="option" aria-selected={active === matches.length} className={active === matches.length ? 'sp-opt sp-on' : 'sp-opt'} onMouseDown={e => { e.preventDefault(); choose(matches.length) }} onMouseEnter={() => setActive(matches.length)}>
+                <span>Add “{text.trim()}”</span>
+                <span className="sp-hint">not on invite list</span>
+              </li>
+            )}
+          </ul>
+        )}
+      </div>
+    </li>
+  )
+}
+
 export default function SeatingPlanner({ groups }) {
   const [plan, setPlan] = useState(venuePlan)
   const [loaded, setLoaded] = useState(false)
@@ -452,6 +562,19 @@ export default function SeatingPlanner({ groups }) {
     setNewName('')
   }
 
+  function seatGuest(tableId, seat, guestId) {
+    update(p => assign(p, guestId, tableId, seat))
+  }
+
+  function seatNewGuest(tableId, seat, name) {
+    const id = newId('cg')
+    update(p => assign({ ...p, customGuests: [...p.customGuests, { id, name }] }, id, tableId, seat))
+  }
+
+  function renameCustomGuest(id, name) {
+    update(p => ({ ...p, customGuests: p.customGuests.map(g => (g.id === id ? { ...g, name } : g)) }))
+  }
+
   function removeCustomGuest(id) {
     update(p => unassign({ ...p, customGuests: p.customGuests.filter(g => g.id !== id) }, id))
   }
@@ -650,6 +773,36 @@ export default function SeatingPlanner({ groups }) {
                 <button type="button" className="sp-btn" onClick={() => duplicateTable(selected)}>Duplicate</button>
                 <button type="button" className="sp-btn sp-tint" onClick={() => removeTable(selected.id)}>Remove</button>
               </div>
+            </div>
+          )}
+          {selected && selected.shape !== 'block' && (
+            <div key={`${selected.id}-guests`} className="sp-card sp-pop">
+              <div className="flex items-baseline justify-between gap-3">
+                <h2>{selected.name} guests</h2>
+                <span className="sp-hint">
+                  {Object.values(plan.assignments).filter(a => a.tableId === selected.id).length} of {selected.seats} seated
+                </span>
+              </div>
+              <ul className="sp-seatlist">
+                {Array.from({ length: selected.seats }, (_, i) => {
+                  const gid = occupantsByTable(plan)[selected.id]?.[i]
+                  return (
+                    <SeatRow
+                      key={`${selected.id}-${i}-${gid || 'empty'}`}
+                      seat={i}
+                      guest={gid ? guestsById[gid] : null}
+                      candidates={allGuests}
+                      tableNameById={tableNameById}
+                      assignments={plan.assignments}
+                      onPick={id => seatGuest(selected.id, i, id)}
+                      onAddCustom={name => seatNewGuest(selected.id, i, name)}
+                      onUnseat={id => update(p => unassign(p, id))}
+                      onRename={renameCustomGuest}
+                    />
+                  )
+                })}
+              </ul>
+              <p className="sp-hint mt-2">Type a name to pick from the invite list. A name that is not on it is added by hand and flagged.</p>
             </div>
           )}
           <div className="sp-card grid gap-3 sm:grid-cols-2">

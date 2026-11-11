@@ -136,6 +136,18 @@
 .sp-eyebrow { font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
 .sp-hint { font-size: 12px; color: var(--muted); }
 
+/* ----- table guest list ----- */
+.sp-seatlist { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 6px; }
+.sp-seatrow { display: flex; align-items: center; gap: 8px; animation: sp-fade 0.35s var(--ease) both; }
+.sp-seatno { flex: none; width: 22px; text-align: right; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.sp-seatname { flex: 1; min-width: 0; padding: 6px 12px; border-radius: 10px; background: var(--fill); }
+.sp-seatrow > .sp-input, .sp-ac { flex: 1; min-width: 0; }
+.sp-ac { position: relative; }
+.sp-flag { background: #fbe9d0; color: #8a4b08; }
+.sp-menu { position: absolute; z-index: 30; left: 0; right: 0; top: calc(100% + 4px); margin: 0; padding: 4px; list-style: none; background: var(--card); border-radius: 12px; box-shadow: var(--shadow); border: 1px solid var(--line); animation: sp-pop 0.2s var(--ease) both; }
+.sp-opt { display: flex; justify-content: space-between; gap: 12px; padding: 8px 10px; border-radius: 8px; cursor: pointer; }
+.sp-opt.sp-on { background: var(--tint); }
+
 /* ----- canvas motion: tables glide, seats cross-fade ----- */
 .sp-tbl { transition: transform 0.4s var(--ease); }
 .sp-tbl.sp-dragging { transition: none; }
