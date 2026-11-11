@@ -151,6 +151,166 @@ export function seatFromList(plan, guests) {
   return { plan: out, matched: slots.length - custom.length, custom: custom.map(c => c.name) }
 }
 
+// Re-space the seated tables evenly over the floor that is actually free.
+// Layout rules, from event-planning and fire-code guidance:
+//  - walkways of ~1.8 m (6 ft) edge to edge between tables, wider at bars and the dance floor;
+//  - tables ringed around the dance floor so guests are drawn in, never boxed behind it;
+//  - queue space in front of bars and the gift table, and room round the DJ/AV so no
+//    table sits between speakers and floor;
+//  - a clear strip along the walls for service and exits.
+// It finds the widest staggered (hex), column-staggered or square lattice that fits every
+// table outside those keep-out zones, keeps the N points closest to the dance floor, then
+// numbers tables in columns from the left. Seats and guests travel with their table.
+export function optimizeLayout(plan) {
+  const movers = plan.tables.filter(t => t.shape !== 'block')
+  const N = movers.length
+  if (!N) return plan
+  const SX = 235 // sideways room one table needs (seat names sit left and right)
+  const SY = 195
+  const X0 = 200
+  const X1 = PLAN_W - 200
+  const Y0 = 265
+  const Y1 = 985
+  const margin = name => (/dance|stage/i.test(name) ? 130 : /bar|gift/i.test(name) ? 105 : /dj|av/i.test(name) ? 110 : 90)
+  const blocks = plan.tables
+    .filter(t => t.shape === 'block')
+    .map(b => {
+      const { w, h } = tableSize(b)
+      const m = margin(b.name)
+      return { x0: b.x - w / 2 - m - 45, x1: b.x + w / 2 + m + 45, y0: b.y - h / 2 - m, y1: b.y + h / 2 + m }
+    })
+  const floor = plan.tables.find(t => t.shape === 'block' && /dance|stage/i.test(t.name))
+  const cx = floor ? floor.x : PLAN_W / 2
+  const cy = floor ? floor.y : 600
+  const ok = (x, y) => x >= X0 && x <= X1 && y >= Y0 && y <= Y1 && !blocks.some(b => x > b.x0 && x < b.x1 && y > b.y0 && y < b.y1)
+
+  const lattice = (s, kind, fx, fy) => {
+    const du = kind === 'cols' ? s * 0.866 : s
+    const dv = kind === 'rows' ? s * 0.866 : s
+    const pts = []
+    const cols = Math.ceil(X1 / SX / du) + 2
+    const rows = Math.ceil(Y1 / SY / dv) + 2
+    for (let i = -1; i < cols; i++) {
+      for (let j = -1; j < rows; j++) {
+        const u = (fx + i) * du + (kind === 'rows' && j % 2 ? du / 2 : 0)
+        const v = (fy + j) * dv + (kind === 'cols' && i % 2 ? dv / 2 : 0)
+        const x = u * SX + X0
+        const y = v * SY + Y0
+        if (ok(x, y)) pts.push({ x, y })
+      }
+    }
+    return pts
+  }
+  const dist = (p, q) => Math.hypot((p.x - q.x) / SX, (p.y - q.y) / SY)
+  const fromCentre = p => Math.hypot((p.x - cx) / SX, (p.y - cy) / SY)
+  const nearest = (p, pts) => Math.min(...pts.filter(q => q !== p).map(q => dist(p, q)))
+  // Trim a lattice down to N tables by repeatedly dropping the one crowding a neighbour most.
+  const trim = pts => {
+    let out = pts
+    while (out.length > N) {
+      let worst = 0
+      let worstD = Infinity
+      out.forEach((p, i) => {
+        const d = nearest(p, out)
+        if (d < worstD) {
+          worstD = d
+          worst = i
+        }
+      })
+      out = out.filter((_, i) => i !== worst)
+    }
+    return out
+  }
+
+  const unevenness = pts => {
+    const d = pts.map(p => nearest(p, pts))
+    const mean = d.reduce((x, y) => x + y, 0) / d.length
+    return { min: Math.min(...d), spread: Math.sqrt(d.reduce((x, y) => x + (y - mean) ** 2, 0) / d.length) }
+  }
+  const score = pts => {
+    if (pts.length < 2) return 0
+    const { min, spread } = unevenness(pts)
+    return min * 100 - spread * 60 - pts.reduce((sum, p) => sum + fromCentre(p), 0) / pts.length
+  }
+
+  // Candidate A: evenly spaced rows. Free stretches of each row (outside keep-outs) get tables
+  // in proportion to their length, evenly spaced inside each stretch.
+  const rowsLayout = R => {
+    const slots = []
+    for (let r = 0; r < R; r++) {
+      const y = R === 1 ? (Y0 + Y1) / 2 : Y0 + ((Y1 - Y0) * r) / (R - 1)
+      let free = [[X0, X1]]
+      blocks
+        .filter(b => y > b.y0 && y < b.y1)
+        .forEach(b => {
+          free = free.flatMap(([a, c]) => (b.x1 <= a || b.x0 >= c ? [[a, c]] : [[a, Math.min(c, b.x0)], [Math.max(a, b.x1), c]]))
+        })
+      free.filter(([a, c]) => c - a >= SX * 0.9).forEach(([a, c]) => slots.push({ y, a, len: c - a, cap: Math.max(1, Math.floor((c - a) / SX)), n: 0 }))
+    }
+    if (slots.reduce((sum, t) => sum + t.cap, 0) < N) return null
+    const total = slots.reduce((sum, t) => sum + t.len, 0)
+    slots.forEach(t => {
+      t.n = Math.min(t.cap, Math.floor((N * t.len) / total))
+    })
+    while (slots.reduce((sum, t) => sum + t.n, 0) < N) {
+      const open = slots.filter(t => t.n < t.cap).sort((m, n) => (N * n.len) / total - n.n - ((N * m.len) / total - m.n))
+      open[0].n++
+    }
+    return slots.flatMap(t => Array.from({ length: t.n }, (_, k) => ({ x: t.a + ((k + 0.5) * t.len) / t.n, y: t.y })))
+  }
+
+  // Candidate B: the widest staggered lattice that fits.
+  const latticeLayout = () => {
+    for (let s = 2.2; s >= 0.5; s -= 0.01) {
+      let best = null
+      let bestScore = -Infinity
+      for (const kind of ['rows', 'cols', 'square']) {
+        for (let a = 0; a < 6; a++) {
+          for (let b = 0; b < 6; b++) {
+            const pts = lattice(s, kind, a / 6, b / 6)
+            if (pts.length < N) continue
+            const keep = trim(pts)
+            const sc = score(keep)
+            if (sc > bestScore) {
+              bestScore = sc
+              best = keep
+            }
+          }
+        }
+      }
+      if (best) return best
+    }
+    return null
+  }
+
+  let found = null
+  let foundScore = -Infinity
+  ;[...[2, 3, 4, 5].map(rowsLayout), latticeLayout()].forEach(pts => {
+    if (!pts || pts.length !== N) return
+    const sc = score(pts)
+    if (sc > foundScore) {
+      foundScore = sc
+      found = { s: Math.min(...pts.map(p => nearest(p, pts))), pts }
+    }
+  })
+  if (!found) return plan
+
+  // Number in columns, left to right, top to bottom.
+  const pts = [...found.pts].sort((p, q) => p.x - q.x)
+  const columns = []
+  pts.forEach(p => {
+    const col = columns[columns.length - 1]
+    if (col && p.x - col[0].x < SX * found.s * 0.35) col.push(p)
+    else columns.push([p])
+  })
+  const ordered = columns.flatMap(col => col.sort((p, q) => p.y - q.y))
+  let k = 0
+  return {
+    ...plan,
+    tables: plan.tables.map(t => (t.shape === 'block' ? t : { ...t, x: Math.round(ordered[k].x), y: Math.round(ordered[k++].y) })),
+  }
+}
+
 // Swap in the venue layout, keeping title, extra guests and any seats that still exist.
 export function applyVenueLayout(plan) {
   return pruneAssignments({ ...plan, tables: venueTables() })

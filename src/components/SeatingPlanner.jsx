@@ -16,6 +16,7 @@ import {
   makeTable,
   newId,
   occupantsByTable,
+  optimizeLayout,
   pruneAssignments,
   seatFromList,
   seatPositions,
@@ -263,6 +264,7 @@ export default function SeatingPlanner({ groups }) {
   const [exporting, setExporting] = useState('')
   const [movingId, setMovingId] = useState(null)
   const [notice, setNotice] = useState('')
+  const [undoTables, setUndoTables] = useState(null)
   const groupsRef = useRef(groups)
   useEffect(() => {
     groupsRef.current = groups
@@ -467,6 +469,19 @@ export default function SeatingPlanner({ groups }) {
     update(() => seeded)
   }
 
+  function optimize() {
+    setUndoTables(plan.tables)
+    setNotice('Tables re-spaced evenly: clear walkways, ringed around the dance floor, room at the bars.')
+    update(p => optimizeLayout(p))
+  }
+
+  function undoOptimize() {
+    const back = undoTables
+    setUndoTables(null)
+    setNotice('')
+    update(p => ({ ...p, tables: back }))
+  }
+
   function clearSeating() {
     if (!window.confirm('Unseat every guest? Tables stay where they are.')) return
     update(p => ({ ...p, assignments: {} }))
@@ -508,7 +523,12 @@ export default function SeatingPlanner({ groups }) {
 
   return (
     <div className="sp space-y-4">
-      {notice && <div className="sp-card sp-pop sp-hint" role="status">{notice}</div>}
+      {notice && (
+        <div className="sp-card sp-pop sp-hint flex items-center justify-between gap-3" role="status">
+          <span>{notice}</span>
+          {undoTables && <button type="button" className="sp-btn sp-tint" onClick={undoOptimize}>Undo</button>}
+        </div>
+      )}
       {error && <div className="sp-card" role="alert" style={{ color: 'var(--accent)' }}>{error}</div>}
 
       <div className="sp-bar">
@@ -525,6 +545,7 @@ export default function SeatingPlanner({ groups }) {
           Auto-seat the rest
         </button>
         <button type="button" className="sp-btn" disabled={!seatedCount} onClick={clearSeating}>Unseat all</button>
+        <button type="button" className="sp-btn" disabled={!plan.tables.some(t => t.shape !== 'block')} onClick={optimize} title="Spread the tables evenly over the free floor, with proper walkways">Optimize layout</button>
         <button type="button" className="sp-btn" onClick={resetToVenue} title="Rydges Cabernet & Merlot floorplan, 12 tables">Venue layout</button>
         <button type="button" className="sp-btn" onClick={loadTableList} title="Seat the agreed 12-table list, matched to RSVP spellings">Guest tables</button>
         <span className="sp-status" aria-live="polite">{saveState}</span>
