@@ -232,6 +232,12 @@ function ListSvg({ plan, guestsById, tables, page, pages }) {
   )
 }
 
+// The couple are always on the plan, ahead of the RSVP guests.
+const COUPLE = [
+  { id: 'couple_esther', name: 'Esther', household: 'Bride', attending: true, dietary: '' },
+  { id: 'couple_rumman', name: 'Rumman', household: 'Groom', attending: true, dietary: '' },
+]
+
 function rsvpGuests(groups) {
   const out = []
   groups.forEach(group => {
@@ -440,6 +446,7 @@ export default function SeatingPlanner({ groups }) {
 
   const allGuests = useMemo(
     () => [
+      ...COUPLE,
       ...rsvpGuests(groups),
       ...plan.customGuests.map(g => ({ id: g.id, name: g.name, household: 'Added by hand', attending: true, dietary: '', custom: true })),
     ],
@@ -623,7 +630,7 @@ export default function SeatingPlanner({ groups }) {
   }
 
   function linkNames() {
-    const { plan: linkedPlan, linked, skipped } = linkHandAdded(plan, rsvpGuests(groups))
+    const { plan: linkedPlan, linked, skipped } = linkHandAdded(plan, [...COUPLE, ...rsvpGuests(groups)])
     if (!linked.length) return setNotice(`Nothing to link${skipped.length ? `; still hand-added: ${skipped.join(', ')}` : ''}.`)
     update(() => linkedPlan)
     setNotice(`Linked ${linked.length} to the invite list: ${linked.join(', ')}.${skipped.length ? ` Still hand-added: ${skipped.join(', ')}.` : ''}`)
