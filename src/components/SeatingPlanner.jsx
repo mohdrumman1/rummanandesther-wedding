@@ -257,6 +257,7 @@ export default function SeatingPlanner({ groups }) {
   const [query, setQuery] = useState('')
   const [onlyUnseated, setOnlyUnseated] = useState(true)
   const [showDeclined, setShowDeclined] = useState(false)
+  const [onlyComing, setOnlyComing] = useState(false)
   const [newName, setNewName] = useState('')
   const [drag, setDrag] = useState(null) // { guestId, x, y, over }
   const [exporting, setExporting] = useState('')
@@ -328,6 +329,7 @@ export default function SeatingPlanner({ groups }) {
   )
   const visible = poolGuests.filter(g => {
     if (onlyUnseated && plan.assignments[g.id]) return false
+    if (onlyComing && g.attending !== true) return false
     const q = query.trim().toLowerCase()
     return !q || g.name.toLowerCase().includes(q) || g.household.toLowerCase().includes(q)
   })
@@ -545,7 +547,10 @@ export default function SeatingPlanner({ groups }) {
             <input type="checkbox" checked={onlyUnseated} onChange={e => setOnlyUnseated(e.target.checked)} /> Unseated only
           </label>
           <label className="sp-check">
-            <input type="checkbox" checked={showDeclined} onChange={e => setShowDeclined(e.target.checked)} /> Include declined
+            <input type="checkbox" checked={onlyComing} onChange={e => { setOnlyComing(e.target.checked); if (e.target.checked) setShowDeclined(false) }} /> Marked as coming only
+          </label>
+          <label className="sp-check">
+            <input type="checkbox" checked={showDeclined} onChange={e => { setShowDeclined(e.target.checked); if (e.target.checked) setOnlyComing(false) }} /> Include declined
           </label>
           <form onSubmit={addCustomGuest} className="flex gap-2">
             <input className="sp-input" placeholder="Add a guest by hand" aria-label="Add a guest by hand" value={newName} onChange={e => setNewName(e.target.value)} />
