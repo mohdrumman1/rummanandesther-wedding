@@ -258,15 +258,19 @@ function norm(text) {
   return String(text || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim()
 }
 
-// One seat in the table's guest list. Empty seats autocomplete from the invite list.
-function SeatRow({ seat, guest, candidates, tableNameById, assignments, onPick, onAddCustom, onUnseat, onRename }) {
+// One seat in the table's guest list. Empty seats, and seats holding a hand-added name, autocomplete from the invite list.
+function SeatRow({ seat, guest, candidates, tableNameById, assignments, onPick, onAddCustom, onLink, onUnseat, onRename }) {
   const [text, setText] = useState('')
   const [open, setOpen] = useState(false)
   const [active, setActive] = useState(0)
-  const q = norm(text)
+  const handAdded = Boolean(guest?.custom)
+  const typing = !guest || handAdded
+  const value = handAdded ? guest.name : text
+  const q = typing ? norm(value) : ''
   const matches = useMemo(() => {
     if (!q) return []
     return candidates
+      .filter(g => !g.custom)
       .map(g => {
         const n = norm(g.name)
         const rank = n.startsWith(q) ? 0 : n.split(' ').some(w => w.startsWith(q)) ? 1 : n.includes(q) ? 2 : -1
@@ -278,11 +282,11 @@ function SeatRow({ seat, guest, candidates, tableNameById, assignments, onPick, 
       .map(m => m.g)
   }, [q, candidates, assignments])
   const exact = matches.some(g => norm(g.name) === q)
-  const showAdd = q && !exact
+  const showAdd = !guest && q && !exact
   const total = matches.length + (showAdd ? 1 : 0)
 
   function choose(i) {
-    if (i < matches.length) onPick(matches[i].id)
+    if (i < matches.length) (handAdded ? onLink(guest.id, matches[i].id) : onPick(matches[i].id))
     else onAddCustom(text.trim())
     setText('')
     setOpen(false)
@@ -299,27 +303,38 @@ function SeatRow({ seat, guest, candidates, tableNameById, assignments, onPick, 
       setActive(a => Math.max(0, a - 1))
     } else if (e.key === 'Enter') {
       e.preventDefault()
-      if (total) choose(Math.min(active, total - 1))
+      if (open && total) choose(Math.min(active, total - 1))
     } else if (e.key === 'Escape') setOpen(false)
   }
 
-  if (guest) {
-    const notInvited = Boolean(guest.custom)
+  const menu = open && total > 0 && (
+    <ul className="sp-menu" role="listbox">
+      {matches.map((g, i) => (
+        <li key={g.id} role="option" aria-selected={i === active} className={i === active ? 'sp-opt sp-on' : 'sp-opt'} onMouseDown={e => { e.preventDefault(); choose(i) }} onMouseEnter={() => setActive(i)}>
+          <span>{g.name}<span className="sp-hint"> · {g.household}</span></span>
+          {assignments[g.id] && <span className="sp-hint">at {tableNameById[assignments[g.id].tableId] || 'a table'}</span>}
+        </li>
+      ))}
+      {showAdd && (
+        <li role="option" aria-selected={active === matches.length} className={active === matches.length ? 'sp-opt sp-on' : 'sp-opt'} onMouseDown={e => { e.preventDefault(); choose(matches.length) }} onMouseEnter={() => setActive(matches.length)}>
+          <span>Add “{text.trim()}”</span>
+          <span className="sp-hint">not on invite list</span>
+        </li>
+      )}
+    </ul>
+  )
+
+  if (guest && !handAdded) {
     return (
       <li className="sp-seatrow">
         <span className="sp-seatno">{seat + 1}</span>
-        {notInvited ? (
-          <input className="sp-input" aria-label={`Seat ${seat + 1} name`} value={guest.name} onChange={e => onRename(guest.id, e.target.value)} />
-        ) : (
-          <span className="sp-seatname">
-            {guest.name}
-            <span className="sp-hint"> · {guest.household}</span>
-          </span>
-        )}
-        {notInvited && <span className="sp-badge sp-flag" title="Not on the invite list. Add them to the guest list if they should be invited.">Not on invite list</span>}
+        <span className="sp-seatname">
+          {guest.name}
+          <span className="sp-hint"> · {guest.household}</span>
+        </span>
         {guest.ceremonyOnly && <span className="sp-badge sp-flag" title="Invited to the ceremony only, not the reception.">Ceremony-only invite</span>}
-        {!notInvited && guest.attending === false && <span className="sp-badge sp-flag">Declined</span>}
-        {!notInvited && guest.attending == null && <span className="sp-badge">No reply</span>}
+        {guest.attending === false && <span className="sp-badge sp-flag">Declined</span>}
+        {guest.attending == null && <span className="sp-badge">No reply</span>}
         <button type="button" className="sp-btn" onClick={() => onUnseat(guest.id)} aria-label={`Unseat ${guest.name}`}>Unseat</button>
       </li>
     )
@@ -331,12 +346,13 @@ function SeatRow({ seat, guest, candidates, tableNameById, assignments, onPick, 
       <div className="sp-ac">
         <input
           className="sp-input"
-          aria-label={`Seat ${seat + 1}: type a guest name`}
+          aria-label={handAdded ? `Seat ${seat + 1} name (pick an invite-list guest to link)` : `Seat ${seat + 1}: type a guest name`}
           placeholder="Type a name…"
-          value={text}
+          value={value}
           autoComplete="off"
           onChange={e => {
-            setText(e.target.value)
+            if (handAdded) onRename(guest.id, e.target.value)
+            else setText(e.target.value)
             setOpen(true)
             setActive(0)
           }}
@@ -344,23 +360,14 @@ function SeatRow({ seat, guest, candidates, tableNameById, assignments, onPick, 
           onBlur={() => setOpen(false)}
           onKeyDown={onKey}
         />
-        {open && total > 0 && (
-          <ul className="sp-menu" role="listbox">
-            {matches.map((g, i) => (
-              <li key={g.id} role="option" aria-selected={i === active} className={i === active ? 'sp-opt sp-on' : 'sp-opt'} onMouseDown={e => { e.preventDefault(); choose(i) }} onMouseEnter={() => setActive(i)}>
-                <span>{g.name}<span className="sp-hint"> · {g.household}</span></span>
-                {assignments[g.id] && <span className="sp-hint">at {tableNameById[assignments[g.id].tableId] || 'a table'}</span>}
-              </li>
-            ))}
-            {showAdd && (
-              <li role="option" aria-selected={active === matches.length} className={active === matches.length ? 'sp-opt sp-on' : 'sp-opt'} onMouseDown={e => { e.preventDefault(); choose(matches.length) }} onMouseEnter={() => setActive(matches.length)}>
-                <span>Add “{text.trim()}”</span>
-                <span className="sp-hint">not on invite list</span>
-              </li>
-            )}
-          </ul>
-        )}
+        {menu}
       </div>
+      {handAdded && (
+        <>
+          <span className="sp-badge sp-flag" title="Not on the invite list. Pick a suggestion to link them to a guest who is.">Not on invite list</span>
+          <button type="button" className="sp-btn" onClick={() => onUnseat(guest.id)} aria-label={`Unseat ${guest.name}`}>Unseat</button>
+        </>
+      )}
     </li>
   )
 }
@@ -575,6 +582,17 @@ export default function SeatingPlanner({ groups }) {
   function seatNewGuest(tableId, seat, name) {
     const id = newId('cg')
     update(p => assign({ ...p, customGuests: [...p.customGuests, { id, name }] }, id, tableId, seat))
+  }
+
+  function linkSeat(customId, guestId) {
+    update(p => {
+      const assignments = { ...p.assignments }
+      const seat = assignments[customId]
+      delete assignments[customId]
+      delete assignments[guestId]
+      if (seat) assignments[guestId] = seat
+      return { ...p, assignments, customGuests: p.customGuests.filter(c => c.id !== customId) }
+    })
   }
 
   function renameCustomGuest(id, name) {
@@ -812,13 +830,14 @@ export default function SeatingPlanner({ groups }) {
                       assignments={plan.assignments}
                       onPick={id => seatGuest(selected.id, i, id)}
                       onAddCustom={name => seatNewGuest(selected.id, i, name)}
+                      onLink={linkSeat}
                       onUnseat={id => update(p => unassign(p, id))}
                       onRename={renameCustomGuest}
                     />
                   )
                 })}
               </ul>
-              <p className="sp-hint mt-2">Type a name to pick from the invite list. A name that is not on it is added by hand and flagged.</p>
+              <p className="sp-hint mt-2">Type a name to pick from the invite list. A name that is not on it is added by hand and flagged; type over a flagged name to link it to an invite-list guest.</p>
             </div>
           )}
           <div className="sp-card grid gap-3 sm:grid-cols-2">
