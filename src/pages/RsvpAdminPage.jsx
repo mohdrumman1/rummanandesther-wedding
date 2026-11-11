@@ -431,8 +431,15 @@ function copyInviteMessage(group, inviteLink) {
   return `Hi ${group.householdName},\n\nWe'd love to invite you to our wedding. Please click the link below to RSVP:\n\n${inviteLink}\n\nWith love,\nRumman & Esther`
 }
 
-function GroupTable({ groups, filter, onEdit, onDelete, readOnly, canCopyInvites }) {
+const ATTENDING_KEYS = ['sangeetAttending', 'ceremonyAttending', 'receptionAttending', 'portMacquarieReceptionAttending']
+// A household that has fully replied and is not coming to anything.
+function isCompleteNotComing(group) {
+  return groupStatus(group) === 'complete' && !group.guests.some(guest => ATTENDING_KEYS.some(key => guest[key] === true))
+}
+
+function GroupTable({ groups, filter, hideNotComing, onEdit, onDelete, readOnly, canCopyInvites }) {
   const filtered = groups.filter(group => {
+    if (hideNotComing && isCompleteNotComing(group)) return false
     if (filter === 'all') return true
     if (filter === 'port-macquarie-reception') {
       return group.guests.some(guest => guest.portMacquarieReceptionInvited === true)
@@ -581,6 +588,7 @@ export default function RsvpAdminPage() {
   const [groups, setGroups] = useState([])
   const [activeGroup, setActiveGroup] = useState(null)
   const [filter, setFilter] = useState('all')
+  const [hideNotComing, setHideNotComing] = useState(false)
   const [view, setView] = useState('guests')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -769,6 +777,16 @@ export default function RsvpAdminPage() {
                     {label}
                   </button>
                 ))}
+                <button
+                  type="button"
+                  aria-pressed={hideNotComing}
+                  onClick={() => setHideNotComing(v => !v)}
+                  className={`font-sans text-[10px] tracking-ultra uppercase border px-4 py-3 ${
+                    hideNotComing ? 'border-burgundy bg-burgundy text-white' : 'border-gold/30 bg-white text-ink/60 hover:border-gold'
+                  }`}
+                >
+                  Hide not coming
+                </button>
                 {loading && (
                   <span className="font-sans text-[11px] tracking-ultra uppercase text-gold">
                     Loading
@@ -778,6 +796,7 @@ export default function RsvpAdminPage() {
               <GroupTable
                 groups={groups}
                 filter={filter}
+                hideNotComing={hideNotComing}
                 onEdit={setActiveGroup}
                 onDelete={removeGroup}
                 readOnly={readOnly}

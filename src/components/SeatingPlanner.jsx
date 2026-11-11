@@ -13,6 +13,7 @@ import {
   clampTable,
   downloadBlob,
   emptyPlan,
+  linkHandAdded,
   makeTable,
   newId,
   occupantsByTable,
@@ -236,12 +237,16 @@ function rsvpGuests(groups) {
   groups.forEach(group => {
     ;(group.guests || []).forEach(guest => {
       const name = String(guest.name || '').trim()
-      if (!name || guest.receptionInvited === false) return
+      if (!name) return
+      // Dad's-list guests are invited to the wedding ceremony only; they are still seated at dinner, so keep them and flag it.
+      const ceremonyOnly = guest.receptionInvited === false && guest.ceremonyInvited !== false
+      if (guest.receptionInvited === false && !ceremonyOnly) return
       out.push({
         id: guest.id,
         name,
         household: group.householdName,
-        attending: guest.receptionAttending,
+        attending: ceremonyOnly ? guest.ceremonyAttending : guest.receptionAttending,
+        ceremonyOnly,
         dietary: group.rsvp?.dietaryRequirements || '',
       })
     })
@@ -312,6 +317,7 @@ function SeatRow({ seat, guest, candidates, tableNameById, assignments, onPick, 
           </span>
         )}
         {notInvited && <span className="sp-badge sp-flag" title="Not on the invite list. Add them to the guest list if they should be invited.">Not on invite list</span>}
+        {guest.ceremonyOnly && <span className="sp-badge sp-flag" title="Invited to the ceremony only, not the reception.">Ceremony-only invite</span>}
         {!notInvited && guest.attending === false && <span className="sp-badge sp-flag">Declined</span>}
         {!notInvited && guest.attending == null && <span className="sp-badge">No reply</span>}
         <button type="button" className="sp-btn" onClick={() => onUnseat(guest.id)} aria-label={`Unseat ${guest.name}`}>Unseat</button>
@@ -598,6 +604,13 @@ export default function SeatingPlanner({ groups }) {
     update(p => optimizeLayout(p))
   }
 
+  function linkNames() {
+    const { plan: linkedPlan, linked, skipped } = linkHandAdded(plan, rsvpGuests(groups))
+    if (!linked.length) return setNotice(`Nothing to link${skipped.length ? `; still hand-added: ${skipped.join(', ')}` : ''}.`)
+    update(() => linkedPlan)
+    setNotice(`Linked ${linked.length} to the invite list: ${linked.join(', ')}.${skipped.length ? ` Still hand-added: ${skipped.join(', ')}.` : ''}`)
+  }
+
   function undoOptimize() {
     const back = undoTables
     setUndoTables(null)
@@ -668,6 +681,9 @@ export default function SeatingPlanner({ groups }) {
           Auto-seat the rest
         </button>
         <button type="button" className="sp-btn" disabled={!seatedCount} onClick={clearSeating}>Unseat all</button>
+        {plan.customGuests.length > 0 && (
+          <button type="button" className="sp-btn sp-tint" onClick={linkNames} title="Swap hand-added names for the matching invite-list guests">Link hand-added ({plan.customGuests.length})</button>
+        )}
         <button type="button" className="sp-btn" disabled={!plan.tables.some(t => t.shape !== 'block')} onClick={optimize} title="Spread the tables evenly over the free floor, with proper walkways">Optimize layout</button>
         <button type="button" className="sp-btn" onClick={resetToVenue} title="Rydges Cabernet & Merlot floorplan, 12 tables">Venue layout</button>
         <button type="button" className="sp-btn" onClick={loadTableList} title="Seat the agreed 12-table list, matched to RSVP spellings">Guest tables</button>

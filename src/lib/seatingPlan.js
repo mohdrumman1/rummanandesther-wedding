@@ -30,6 +30,70 @@ export const TABLE_LIST = [
   ['Sharon', 'Tony', 'Alex', 'Minny', 'Anil', 'Vinny', 'Roy', 'Anima', 'Shafi'],
 ]
 
+// Names from the first table list that are really someone on the invite list under a fuller name.
+// 'Name' or 'Name|Household' (when two guests share a name).
+export const NAME_LINKS = {
+  mercy: 'Ammachi',
+  sumi: 'Sunita Philip',
+  hameeda: 'Hameeda',
+  suzy: 'Susymamma',
+  maree: 'Mareena',
+  ekta: 'Ekta',
+  shahinaz: 'Shahinaz',
+  saleem: 'Dr Saleem Lathif',
+  shafeela: 'Dr Shafeela',
+  nifri: 'Nifri',
+  yusuf: 'Dr Yusuf Kumble',
+  rakesh: 'Dr Rakesh PV',
+  archana: 'Dr Archana',
+  joy: 'Dr Joy Antony',
+  anju: 'Anju|Anju and Dr Joy Antony',
+  narayanan: 'Dr Narayanan V',
+  lalitha: 'Lalita',
+  dave: 'Dr Dev',
+  neha: 'Neeha',
+  'kathan partner': 'Teresa Nguyen (my partner)',
+  roy: 'Dr Roy Thomas',
+  sanjeev: 'Thomas Abraham',
+  tony: 'Dr Thomas Mathai',
+  minny: 'Anne|Anne and Dr Alex Thomas',
+  anima: 'Annina',
+}
+
+const nameKey = text => String(text || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()
+
+// Guests the first table list matched to the wrong person; they are swapped for the right one.
+export const NAME_FIXES = {
+  'shimmy chatterjee': 'Alice|George & Alice',
+  'aaron atty': 'Dr Sharon',
+  'alex yan': 'Dr Alex Thomas',
+}
+
+// Swap hand-added (and wrongly matched) guests for the invite-list guest they really are, keeping the seat.
+export function linkHandAdded(plan, guests) {
+  const linked = []
+  const skipped = []
+  let next = plan
+  const invited = guests.filter(g => !g.custom)
+  const entries = [
+    ...plan.customGuests.map(c => ({ id: c.id, name: c.name, target: NAME_LINKS[nameKey(c.name)] || c.name, custom: true })),
+    ...invited.filter(g => NAME_FIXES[nameKey(g.name)] && plan.assignments[g.id]).map(g => ({ id: g.id, name: g.name, target: NAME_FIXES[nameKey(g.name)] })),
+  ]
+  entries.forEach(entry => {
+    const [targetName, targetHousehold] = entry.target.split('|')
+    const hits = invited.filter(g => nameKey(g.name) === nameKey(targetName) && (!targetHousehold || g.household === targetHousehold))
+    if (hits.length !== 1 || next.assignments[hits[0].id]) return skipped.push(entry.name)
+    const guest = hits[0]
+    const assignments = { ...next.assignments }
+    const seat = assignments[entry.id]
+    delete assignments[entry.id]
+    if (seat) assignments[guest.id] = seat
+    next = { ...next, assignments, customGuests: entry.custom ? next.customGuests.filter(x => x.id !== entry.id) : next.customGuests }
+    linked.push(`${entry.name} → ${guest.name}`)
+  })
+  return { plan: next, linked, skipped }
+}
+
 // Cabernet & Merlot room at Rydges Hunter Valley, from the venue floorplan
 // (docs/venue): 12 round tables (rows 1 and 3 of the six staggered columns), dance floor top
 // centre, bars along the bottom wall. Each entry is a column's first-row y in floorplan pixels (the columns are
