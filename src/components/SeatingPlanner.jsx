@@ -386,8 +386,7 @@ export default function SeatingPlanner({ groups }) {
   const [selectedId, setSelectedId] = useState(null)
   const [query, setQuery] = useState('')
   const [onlyUnseated, setOnlyUnseated] = useState(true)
-  const [showDeclined, setShowDeclined] = useState(false)
-  const [onlyComing, setOnlyComing] = useState(false)
+  const [status, setStatus] = useState('yes') // yes | pending | declined | all
   const [newName, setNewName] = useState('')
   const [drag, setDrag] = useState(null) // { guestId, x, y, over }
   const [exporting, setExporting] = useState('')
@@ -455,16 +454,17 @@ export default function SeatingPlanner({ groups }) {
   const guestsById = useMemo(() => Object.fromEntries(allGuests.map(g => [g.id, g])), [allGuests])
   const tableNameById = useMemo(() => Object.fromEntries(plan.tables.map(t => [t.id, t.name])), [plan.tables])
 
-  const poolGuests = useMemo(
-    () => allGuests.filter(g => showDeclined || g.attending !== false),
-    [allGuests, showDeclined],
-  )
-  const visible = poolGuests.filter(g => {
-    if (onlyUnseated && plan.assignments[g.id]) return false
-    if (onlyComing && g.attending !== true) return false
+  // Declined guests never go to the auto-seater or the "x of y seated" count.
+  const poolGuests = useMemo(() => allGuests.filter(g => g.attending !== false), [allGuests])
+  const statusOf = g => (g.attending === true ? 'yes' : g.attending === false ? 'declined' : 'pending')
+  const matchesQuery = g => {
     const q = query.trim().toLowerCase()
     return !q || g.name.toLowerCase().includes(q) || g.household.toLowerCase().includes(q)
-  })
+  }
+  const listed = allGuests.filter(g => (!onlyUnseated || !plan.assignments[g.id]) && matchesQuery(g))
+  const statusCounts = { yes: 0, pending: 0, declined: 0, all: listed.length }
+  listed.forEach(g => { statusCounts[statusOf(g)] += 1 })
+  const visible = listed.filter(g => status === 'all' || statusOf(g) === status)
   const seatedCount = poolGuests.filter(g => plan.assignments[g.id]).length
   const selected = plan.tables.find(t => t.id === selectedId)
 
@@ -576,9 +576,9 @@ export default function SeatingPlanner({ groups }) {
 
   function addCustomGuest(e) {
     e.preventDefault()
-    const name = newName.trim()
-    if (!name) return
-    update(p => ({ ...p, customGuests: [...p.customGuests, { id: newId('cg'), name }] }))
+    const names = newName.split(/[\n,]+/).map(n => n.trim()).filter(Boolean)
+    if (!names.length) return
+    update(p => ({ ...p, customGuests: [...p.customGuests, ...names.map(name => ({ id: newId('cg'), name }))] }))
     setNewName('')
   }
 
@@ -649,6 +649,24 @@ export default function SeatingPlanner({ groups }) {
   }
 
   // ----- export -----
+  function exportCsv() {
+    const esc = v => `"${String(v ?? '').replace(/"/g, '""')}"`
+    const tableOrder = Object.fromEntries(plan.tables.map((t, i) => [t.id, i]))
+    const rows = allGuests
+      .map(g => ({ g, spot: plan.assignments[g.id] }))
+      .sort((a, b) => (a.spot ? tableOrder[a.spot.tableId] : 1e9) - (b.spot ? tableOrder[b.spot.tableId] : 1e9) || (a.spot?.seat ?? 0) - (b.spot?.seat ?? 0) || a.g.name.localeCompare(b.g.name))
+      .map(({ g, spot }) => [
+        spot ? tableNameById[spot.tableId] : 'Unseated',
+        spot ? spot.seat + 1 : '',
+        g.name,
+        g.household,
+        g.custom ? 'Not on invite list' : g.attending === true ? 'Yes' : g.attending === false ? 'No' : 'Pending',
+        g.dietary || '',
+      ])
+    const csv = [['Table', 'Seat', 'Guest', 'Household', 'RSVP', 'Dietary'], ...rows].map(r => r.map(esc).join(',')).join('\n')
+    downloadBlob(new Blob([csv], { type: 'text/csv' }), 'seating-plan.csv')
+  }
+
   async function exportAs(kind) {
     setExporting(kind)
     setError('')
@@ -716,6 +734,7 @@ export default function SeatingPlanner({ groups }) {
         <button type="button" className="sp-btn" disabled={Boolean(exporting)} onClick={() => exportAs('png')}>
           {exporting === 'png' ? 'Rendering…' : 'Download image'}
         </button>
+        <button type="button" className="sp-btn" onClick={exportCsv} title="Guest list by table, with RSVP and dietary">Download CSV</button>
         <button type="button" className="sp-btn sp-tint" disabled={Boolean(exporting)} onClick={() => exportAs('pdf')}>
           {exporting === 'pdf' ? 'Rendering…' : 'Download PDF'}
         </button>
@@ -728,17 +747,27 @@ export default function SeatingPlanner({ groups }) {
             <p className="sp-hint">{seatedCount} of {poolGuests.length} seated</p>
           </div>
           <input className="sp-input" placeholder="Search name or household" aria-label="Search guests" value={query} onChange={e => setQuery(e.target.value)} />
+          <div className="sp-seg sp-sm" style={{ '--n': 4, '--i': ['yes', 'pending', 'declined', 'all'].indexOf(status) }} role="group" aria-label="Filter by RSVP">
+            {[['yes', 'Yes'], ['pending', 'Pending'], ['declined', 'No'], ['all', 'All']].map(([value, label]) => (
+              <button key={value} type="button" aria-pressed={status === value} onClick={() => setStatus(value)}>
+                {label} {statusCounts[value]}
+              </button>
+            ))}
+          </div>
           <label className="sp-check">
             <input type="checkbox" checked={onlyUnseated} onChange={e => setOnlyUnseated(e.target.checked)} /> Unseated only
           </label>
-          <label className="sp-check">
-            <input type="checkbox" checked={onlyComing} onChange={e => { setOnlyComing(e.target.checked); if (e.target.checked) setShowDeclined(false) }} /> Marked as coming only
-          </label>
-          <label className="sp-check">
-            <input type="checkbox" checked={showDeclined} onChange={e => { setShowDeclined(e.target.checked); if (e.target.checked) setOnlyComing(false) }} /> Include declined
-          </label>
           <form onSubmit={addCustomGuest} className="flex gap-2">
-            <input className="sp-input" placeholder="Add a guest by hand" aria-label="Add a guest by hand" value={newName} onChange={e => setNewName(e.target.value)} />
+            <textarea
+              className="sp-input"
+              rows={1}
+              style={{ resize: 'none', paddingTop: 8 }}
+              placeholder="Add guests by hand (paste a list)"
+              aria-label="Add guests by hand"
+              value={newName}
+              onChange={e => setNewName(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) addCustomGuest(e) }}
+            />
             <button type="submit" className="sp-btn sp-tint">Add</button>
           </form>
           <p className="sp-hint">Drag a guest onto a table or a seat. Drag a seated guest to move or swap, or back here to unseat.</p>

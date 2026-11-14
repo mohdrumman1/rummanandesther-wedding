@@ -179,6 +179,8 @@
   transform: translateX(calc(var(--i) * 100%));
   transition: transform 0.4s var(--ease);
 }
+.sp-seg.sp-sm { display: grid; width: 100%; }
+.sp-seg.sp-sm button { padding: 0 4px; font-size: 12px; white-space: nowrap; }
 .sp-seg button {
   position: relative;
   min-height: 28px;
