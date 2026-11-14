@@ -441,6 +441,9 @@ function GroupTable({ groups, filter, hideNotComing, onEdit, onDelete, readOnly,
   const filtered = groups.filter(group => {
     if (hideNotComing && isCompleteNotComing(group)) return false
     if (filter === 'all') return true
+    if (filter === 'reception') {
+      return group.guests.some(guest => guest.receptionInvited !== false && guest.receptionAttending === true)
+    }
     if (filter === 'port-macquarie-reception') {
       return group.guests.some(guest => guest.portMacquarieReceptionInvited === true)
     }
@@ -762,6 +765,7 @@ export default function RsvpAdminPage() {
                   ['partial', 'Partial'],
                   ['complete', 'Complete'],
                   ['empty', 'No Guests'],
+                  ['reception', 'Reception'],
                   ['port-macquarie-reception', 'Port Reception'],
                 ].map(([value, label]) => (
                   <button
