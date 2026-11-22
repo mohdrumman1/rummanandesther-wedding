@@ -250,9 +250,9 @@ export default function Home() {
 
         <div className="max-w-4xl mx-auto grid md:grid-cols-3 gap-8">
           {[
-            { title: 'The Sangeet', icon: '◆', desc: 'Kick off the celebrations the night before: music, dancing, and good company at our home in Cameron Park.', date: 'December 11, 2026' },
-            { title: 'The Ceremony', icon: '◆', desc: 'We say our vows surrounded by the rolling vineyards of Hunter Valley. Venue details coming very soon.', date: 'December 12, 2026' },
-            { title: 'The Reception', icon: '◆', desc: 'A western-inspired night at Rydges Resort Hunter Valley. Great food, great music, and dancing till late.', date: 'December 12, 2026' },
+            { title: 'The Sangeet', icon: '◆', desc: 'Kick off the celebrations the night before: music, dancing, and good company at our home in Cameron Park.', date: 'December 11, 2026 · 5pm to 10pm' },
+            { title: 'The Ceremony', icon: '◆', desc: 'We say our vows surrounded by the rolling vineyards of Hunter Valley. Venue details coming very soon.', date: 'December 12, 2026 · 2pm to 4pm' },
+            { title: 'The Reception', icon: '◆', desc: 'A western-inspired night at Rydges Resort Hunter Valley. Great food, great music, and dancing till late.', date: 'December 12, 2026 · 6pm to 12am' },
           ].map((event, i) => (
             <motion.div
               key={event.title}

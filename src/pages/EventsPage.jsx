@@ -14,7 +14,7 @@ const events = [
     venue: 'Pasterfield Sports Complex',
     address: '20 Horizon Ave, Cameron Park NSW 2285',
     directionsUrl: 'https://www.google.com/maps/search/?api=1&query=Pasterfield+Sports+Complex%2C+20+Horizon+Ave%2C+Cameron+Park+NSW+2285',
-    time: 'An evening of dancing and singing',
+    time: '5pm to 10pm',
     date: 'Friday, December 11, 2026',
     description:
       'Join us the night before the wedding for the Sangeet: a joyful evening of dancing, singing, and celebration at Pasterfield Sports Complex.',
@@ -25,7 +25,7 @@ const events = [
     venue: "Saint Peter's Church",
     address: 'Hunter Valley, NSW, Australia',
     directionsUrl: 'https://maps.app.goo.gl/hHtznwBQ5G4HQaXr6',
-    time: 'Ceremony begins on 12 December 2026',
+    time: '2pm to 4pm',
     date: 'Saturday, December 12, 2026',
     description:
       "Join us as we exchange our vows at Saint Peter's Church in Hunter Valley.",
@@ -36,7 +36,7 @@ const events = [
     venue: 'Rydges Resort Hunter Valley',
     address: '430 Wine Country Drive, Lovedale NSW 2325',
     directionsUrl: 'https://www.google.com/maps/search/?api=1&query=Rydges+Resort+Hunter+Valley%2C+430+Wine+Country+Drive%2C+Lovedale+NSW+2325',
-    time: 'Western-inspired evening reception',
+    time: '6pm to 12am',
     date: 'Saturday, December 12, 2026',
     description:
       'Celebrate with us at a western-inspired reception at Rydges Hunter Valley, with food, music, and dancing under the stars.',
