@@ -191,6 +191,21 @@ function PlanSvg({ plan, guestsById, interactive = false, selectedId = null, dra
 
 const CARDS_PER_PAGE = 6
 
+function wrapText(text, max) {
+  const lines = []
+  let line = ''
+  for (const word of String(text).split(/\s+/).filter(Boolean)) {
+    if (line && line.length + word.length + 1 > max) {
+      lines.push(line)
+      line = word
+    } else {
+      line = line ? `${line} ${word}` : word
+    }
+  }
+  if (line) lines.push(line)
+  return lines
+}
+
 function ListSvg({ plan, guestsById, tables, page, pages }) {
   const occ = occupantsByTable(plan)
   const cardW = 450
@@ -202,7 +217,13 @@ function ListSvg({ plan, guestsById, tables, page, pages }) {
           const x = 80 + (n % 3) * (cardW + 45)
           const y = 170 + Math.floor(n / 3) * (cardH + 40)
           const rows = Array.from({ length: table.seats }, (_, i) => guestsById[(occ[table.id] || {})[i]])
-          const lineH = Math.min(28, 320 / Math.max(1, table.seats))
+          // Dietary notes wrap under the name in full; spacing shrinks to fit the card.
+          const notes = rows.map(g => (g?.dietary ? wrapText(g.dietary, 62) : []))
+          const NAME_H = 26
+          const NOTE_H = 12
+          const natural = notes.reduce((sum, n) => sum + NAME_H + n.length * NOTE_H, 0)
+          const k = Math.min(1, 320 / Math.max(1, natural))
+          let cy = y + 92
           return (
             <g key={table.id}>
               <rect x={x} y={y} width={cardW} height={cardH} fill="#fff" stroke={GOLD} strokeWidth="1.2" />
@@ -211,19 +232,21 @@ function ListSvg({ plan, guestsById, tables, page, pages }) {
               <text x={x + cardW - 22} y={y + 36} textAnchor="end" fontFamily={SANS} fontSize="11" letterSpacing="2" fill={GOLD}>
                 {rows.filter(Boolean).length}/{table.seats}
               </text>
-              {rows.map((guest, i) => (
-                <g key={i}>
-                  <text x={x + 22} y={y + 92 + i * lineH} fontFamily={SANS} fontSize="12" fill={GOLD_DARK}>{i + 1}</text>
-                  <text x={x + 52} y={y + 92 + i * lineH} fontFamily={SERIF} fontSize={Math.min(19, lineH - 5)} fill={guest ? INK : '#c9bfb3'} fontStyle={guest ? 'normal' : 'italic'}>
-                    {guest ? shorten(guest.name, 30) : 'empty'}
-                  </text>
-                  {guest?.dietary && (
-                    <text x={x + cardW - 20} y={y + 92 + i * lineH} textAnchor="end" fontFamily={SANS} fontSize="10" fill={BURGUNDY}>
-                      {shorten(guest.dietary, 22)}
+              {rows.map((guest, i) => {
+                const rowY = cy
+                cy += (NAME_H + notes[i].length * NOTE_H) * k
+                return (
+                  <g key={i}>
+                    <text x={x + 22} y={rowY} fontFamily={SANS} fontSize={12 * k} fill={GOLD_DARK}>{i + 1}</text>
+                    <text x={x + 52} y={rowY} fontFamily={SERIF} fontSize={19 * k} fill={guest ? INK : '#c9bfb3'} fontStyle={guest ? 'normal' : 'italic'}>
+                      {guest ? shorten(guest.name, 30) : 'empty'}
                     </text>
-                  )}
-                </g>
-              ))}
+                    {notes[i].map((line, j) => (
+                      <text key={j} x={x + 52} y={rowY + (j + 1) * NOTE_H * k} fontFamily={SANS} fontSize={10 * k} fill={BURGUNDY}>{line}</text>
+                    ))}
+                  </g>
+                )
+              })}
             </g>
           )
         })}
