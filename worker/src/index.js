@@ -203,14 +203,14 @@ function groupSummary(group) {
   );
   return {
     status: !guests.length ? 'empty' : allAnswered ? 'complete' : someAnswered ? 'partial' : 'pending',
-    sangeetYes: guests.filter(guest => guest.sangeetAttending === true).length,
-    ceremonyYes: guests.filter(guest => guest.ceremonyAttending === true).length,
-    receptionYes: guests.filter(guest => guest.receptionAttending === true).length,
-    sangeetNo: guests.filter(guest => guest.sangeetAttending === false).length,
-    ceremonyNo: guests.filter(guest => guest.ceremonyAttending === false).length,
-    receptionNo: guests.filter(guest => guest.receptionAttending === false).length,
-    portMacquarieReceptionYes: guests.filter(guest => guest.portMacquarieReceptionAttending === true).length,
-    portMacquarieReceptionNo: guests.filter(guest => guest.portMacquarieReceptionAttending === false).length,
+    sangeetYes: guests.filter(guest => guest.sangeetInvited !== false && guest.sangeetAttending === true).length,
+    ceremonyYes: guests.filter(guest => guest.ceremonyInvited !== false && guest.ceremonyAttending === true).length,
+    receptionYes: guests.filter(guest => guest.receptionInvited !== false && guest.receptionAttending === true).length,
+    sangeetNo: guests.filter(guest => guest.sangeetInvited !== false && guest.sangeetAttending === false).length,
+    ceremonyNo: guests.filter(guest => guest.ceremonyInvited !== false && guest.ceremonyAttending === false).length,
+    receptionNo: guests.filter(guest => guest.receptionInvited !== false && guest.receptionAttending === false).length,
+    portMacquarieReceptionYes: guests.filter(guest => guest.portMacquarieReceptionInvited === true && guest.portMacquarieReceptionAttending === true).length,
+    portMacquarieReceptionNo: guests.filter(guest => guest.portMacquarieReceptionInvited === true && guest.portMacquarieReceptionAttending === false).length,
     children: guests.reduce((total, guest) => total + Number(guest.childrenCount || 0), 0),
   };
 }

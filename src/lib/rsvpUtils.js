@@ -66,29 +66,26 @@ export function rsvpCounts(groups) {
     counts.totalGuestCapacity += namedGuestCount + additionalSpots
     if (status === 'complete') counts.completeHouseholds += 1
     if (status === 'pending' || status === 'partial') counts.pendingHouseholds += 1
+    // Read-only logins get blanked guests plus a server-computed summary, so trust the summary when present.
     if (group.summary) {
-      counts.sangeetYes += Number(group.summary.sangeetYes || 0)
-      counts.ceremonyYes += Number(group.summary.ceremonyYes || 0)
-      counts.receptionYes += Number(group.summary.receptionYes || 0)
-      counts.portMacquarieReceptionYes += Number(group.summary.portMacquarieReceptionYes || 0)
-      counts.sangeetNo += Number(group.summary.sangeetNo || 0)
-      counts.ceremonyNo += Number(group.summary.ceremonyNo || 0)
-      counts.receptionNo += Number(group.summary.receptionNo || 0)
-      counts.portMacquarieReceptionNo += Number(group.summary.portMacquarieReceptionNo || 0)
-      counts.children += Number(group.summary.children || 0)
+      Object.keys(counts).forEach(key => {
+        if (/(Yes|No)$/.test(key) || key === 'children') counts[key] += Number(group.summary[key] || 0)
+      })
       return counts
     }
-    group.guests.forEach(guest => {
-      if (guest.sangeetAttending === true) counts.sangeetYes += 1
-      if (guest.ceremonyAttending === true) counts.ceremonyYes += 1
-      if (guest.receptionAttending === true) counts.receptionYes += 1
-      if (guest.portMacquarieReceptionAttending === true) counts.portMacquarieReceptionYes += 1
-      if (guest.sangeetAttending === false) counts.sangeetNo += 1
-      if (guest.ceremonyAttending === false) counts.ceremonyNo += 1
-      if (guest.receptionAttending === false) counts.receptionNo += 1
-      if (guest.portMacquarieReceptionAttending === false) counts.portMacquarieReceptionNo += 1
-      counts.children += Number(guest.childrenCount || 0)
+    // Count yes/no only for events the guest is actually invited to (some guests carry a stale reply for an event they were later removed from).
+    guests.forEach(guest => {
+      const tally = (invited, answer, yesKey, noKey) => {
+        if (!invited) return
+        if (answer === true) counts[yesKey] += 1
+        if (answer === false) counts[noKey] += 1
+      }
+      tally(guest.sangeetInvited !== false, guest.sangeetAttending, 'sangeetYes', 'sangeetNo')
+      tally(guest.ceremonyInvited !== false, guest.ceremonyAttending, 'ceremonyYes', 'ceremonyNo')
+      tally(guest.receptionInvited !== false, guest.receptionAttending, 'receptionYes', 'receptionNo')
+      tally(guest.portMacquarieReceptionInvited === true, guest.portMacquarieReceptionAttending, 'portMacquarieReceptionYes', 'portMacquarieReceptionNo')
     })
+    counts.children += group.summary ? Number(group.summary.children || 0) : guests.reduce((total, guest) => total + Number(guest.childrenCount || 0), 0)
     return counts
   }, initial)
 }

@@ -437,12 +437,22 @@ function isCompleteNotComing(group) {
   return groupStatus(group) === 'complete' && !group.guests.some(guest => ATTENDING_KEYS.some(key => guest[key] === true))
 }
 
+// Yes count for one event in a household; read-only logins only have the server summary.
+function eventYes(group, key, invited, answer) {
+  return group.summary?.[key] ?? group.guests.filter(guest => invited(guest) && guest[answer] === true).length
+}
+const sangeetComing = group => eventYes(group, 'sangeetYes', g => g.sangeetInvited !== false, 'sangeetAttending')
+const receptionComing = group => eventYes(group, 'receptionYes', g => g.receptionInvited !== false, 'receptionAttending')
+
 function GroupTable({ groups, filter, hideNotComing, onEdit, onDelete, readOnly, canCopyInvites }) {
   const filtered = groups.filter(group => {
     if (hideNotComing && isCompleteNotComing(group)) return false
     if (filter === 'all') return true
+    if (filter === 'sangeet') {
+      return sangeetComing(group) > 0
+    }
     if (filter === 'reception') {
-      return group.guests.some(guest => guest.receptionInvited !== false && guest.receptionAttending === true)
+      return receptionComing(group) > 0
     }
     if (filter === 'port-macquarie-reception') {
       return group.guests.some(guest => guest.portMacquarieReceptionInvited === true)
@@ -453,7 +463,21 @@ function GroupTable({ groups, filter, hideNotComing, onEdit, onDelete, readOnly,
   if (canCopyInvites) headings.push('Invite Link')
   if (!readOnly) headings.push('Actions')
 
+  const guestsIn = filtered.flatMap(group => group.guests)
+  const total =
+    filter === 'sangeet'
+      ? { count: filtered.reduce((n, group) => n + sangeetComing(group), 0), label: 'guests coming to the sangeet' }
+      : filter === 'reception'
+      ? { count: filtered.reduce((n, group) => n + receptionComing(group), 0), label: 'guests coming to the reception' }
+      : filter === 'port-macquarie-reception'
+        ? { count: guestsIn.filter(g => g.portMacquarieReceptionInvited === true && g.portMacquarieReceptionAttending === true).length, label: 'guests coming to the Port reception' }
+        : { count: guestsIn.length, label: 'guests' }
+
   return (
+    <div className="space-y-3">
+      <p className="font-sans text-[13px] text-ink/70">
+        <strong className="text-burgundy text-[18px]">{total.count}</strong> {total.label} · {filtered.length} {filtered.length === 1 ? 'household' : 'households'}
+      </p>
     <div className="border border-gold/25 bg-white overflow-hidden">
       <div className="overflow-x-auto">
         <table className="w-full min-w-[1040px] text-left">
@@ -469,10 +493,10 @@ function GroupTable({ groups, filter, hideNotComing, onEdit, onDelete, readOnly,
           <tbody>
             {filtered.map(group => {
               const status = groupStatus(group)
-              const sangeetYes = group.summary?.sangeetYes ?? group.guests.filter(guest => guest.sangeetAttending === true).length
-              const ceremonyYes = group.summary?.ceremonyYes ?? group.guests.filter(guest => guest.ceremonyAttending === true).length
-              const receptionYes = group.summary?.receptionYes ?? group.guests.filter(guest => guest.receptionAttending === true).length
-              const portReceptionYes = group.summary?.portMacquarieReceptionYes ?? group.guests.filter(guest => guest.portMacquarieReceptionAttending === true).length
+              const sangeetYes = group.summary?.sangeetYes ?? group.guests.filter(guest => guest.sangeetInvited !== false && guest.sangeetAttending === true).length
+              const ceremonyYes = group.summary?.ceremonyYes ?? group.guests.filter(guest => guest.ceremonyInvited !== false && guest.ceremonyAttending === true).length
+              const receptionYes = group.summary?.receptionYes ?? group.guests.filter(guest => guest.receptionInvited !== false && guest.receptionAttending === true).length
+              const portReceptionYes = group.summary?.portMacquarieReceptionYes ?? group.guests.filter(guest => guest.portMacquarieReceptionInvited === true && guest.portMacquarieReceptionAttending === true).length
               const portReceptionPending = group.guests.some(guest =>
                 guest.portMacquarieReceptionInvited === true && guest.portMacquarieReceptionAttending === null
               )
@@ -581,6 +605,7 @@ function GroupTable({ groups, filter, hideNotComing, onEdit, onDelete, readOnly,
           No households match this view.
         </p>
       )}
+    </div>
     </div>
   )
 }
@@ -765,6 +790,7 @@ export default function RsvpAdminPage() {
                   ['partial', 'Partial'],
                   ['complete', 'Complete'],
                   ['empty', 'No Guests'],
+                  ['sangeet', 'Sangeet'],
                   ['reception', 'Reception'],
                   ['port-macquarie-reception', 'Port Reception'],
                 ].map(([value, label]) => (
