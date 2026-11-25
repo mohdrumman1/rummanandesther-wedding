@@ -3,7 +3,7 @@ import { motion } from 'framer-motion'
 
 export default function Footer() {
   return (
-    <footer className="bg-ink text-white/60 py-16 px-6 text-center">
+    <footer className="bg-ink text-white/60 py-16 px-6 text-center print:hidden">
       <motion.div
         initial={{ opacity: 0 }}
         whileInView={{ opacity: 1 }}
@@ -33,6 +33,7 @@ export default function Footer() {
             { to: '/registry', label: 'Registry' },
             { to: '/accommodation', label: 'Accommodation' },
             { to: '/rsvp', label: 'RSVP' },
+            { to: '/seating', label: 'Find Your Seat' },
           ].map(link => (
             <Link
               key={link.to}

@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion'
+import { Link } from 'react-router-dom'
 import PageHeader from '../components/PageHeader'
 
 const pageVariants = {
@@ -40,6 +41,7 @@ const events = [
     date: 'Saturday, December 12, 2026',
     description:
       'Celebrate with us at a western-inspired reception at Rydges Hunter Valley, with food, music, and dancing under the stars.',
+    seating: true,
   },
 ]
 
@@ -103,6 +105,14 @@ export default function EventsPage() {
                   </p>
 
                   <div className="flex flex-wrap gap-4">
+                    {event.seating && (
+                      <Link
+                        to="/seating"
+                        className="font-sans text-[10px] tracking-ultra uppercase bg-burgundy text-white px-5 py-2 hover:bg-burgundy-dark transition-colors"
+                      >
+                        Find your seat
+                      </Link>
+                    )}
                     {event.directionsUrl ? (
                       <a
                         href={event.directionsUrl}

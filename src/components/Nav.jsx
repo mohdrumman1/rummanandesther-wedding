@@ -10,6 +10,7 @@ const navLinks = [
   { to: '/registry', label: 'Registry' },
   { to: '/accommodation', label: 'Accommodation' },
   { to: '/rsvp', label: 'RSVP' },
+  { to: '/seating', label: 'Find Your Seat' },
 ]
 
 export default function Nav() {
@@ -47,7 +48,7 @@ export default function Nav() {
   return (
     <>
       <motion.nav
-        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
+        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 print:hidden ${
           scrolled ? 'bg-cream/96 backdrop-blur-sm shadow-sm' : 'bg-transparent'
         }`}
         initial={{ opacity: 0, y: -16 }}
@@ -58,7 +59,7 @@ export default function Nav() {
 
           {/* Left links */}
           <div className="hidden lg:flex items-center gap-8">
-            {navLinks.slice(0, 3).map(link => (
+            {navLinks.slice(0, 4).map(link => (
               <NavLink key={link.to} to={link.to} end={link.to === '/'} className={({ isActive }) => linkClass(isActive)}>
                 {link.label}
               </NavLink>
@@ -80,7 +81,7 @@ export default function Nav() {
 
           {/* Right links */}
           <div className="hidden lg:flex items-center gap-8">
-            {navLinks.slice(3).map(link => (
+            {navLinks.slice(4).map(link => (
               <NavLink key={link.to} to={link.to} className={({ isActive }) => linkClass(isActive)}>
                 {link.label}
               </NavLink>
@@ -107,18 +108,18 @@ export default function Nav() {
       <AnimatePresence>
         {menuOpen && (
           <motion.div
-            className="fixed inset-0 z-40 bg-cream flex flex-col items-center justify-center"
+            className="fixed inset-0 z-40 bg-cream flex flex-col items-center overflow-y-auto"
             initial={{ clipPath: 'circle(0% at calc(100% - 40px) 40px)' }}
             animate={{ clipPath: 'circle(150% at calc(100% - 40px) 40px)' }}
             exit={{ clipPath: 'circle(0% at calc(100% - 40px) 40px)' }}
             transition={{ duration: 0.5, ease: 'easeInOut' }}
           >
-            <div className="flex items-center gap-3 mb-12 opacity-30">
+            <div className="flex items-center gap-3 mb-12 mt-auto pt-16 opacity-30">
               <span className="h-px w-12 bg-gold" />
               <span className="text-gold text-lg">◆</span>
               <span className="h-px w-12 bg-gold" />
             </div>
-            <nav className="flex flex-col items-center gap-7">
+            <nav className="flex flex-col items-center gap-7 mb-auto pb-16">
               {navLinks.map((link, i) => (
                 <motion.div
                   key={link.to}

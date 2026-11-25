@@ -28,8 +28,9 @@ async function parseResponse(res) {
 }
 
 async function request(path, options = {}) {
+  // No content-type on body-less requests: it would force a CORS preflight on every GET.
   const headers = {
-    'content-type': 'application/json',
+    ...(options.body ? { 'content-type': 'application/json' } : {}),
     ...(options.headers || {}),
   }
   return parseResponse(await fetch(`${RSVP_API_BASE_URL}${path}`, {
@@ -131,6 +132,10 @@ export async function fetchSeatingPlan() {
     cache: 'no-store',
     headers: adminHeaders(),
   })
+}
+
+export async function fetchPublicSeating() {
+  return request('/api/seating', { cache: 'no-store' })
 }
 
 export async function saveSeatingPlan(plan) {

@@ -11,6 +11,7 @@ import RegistryPage from './pages/RegistryPage'
 import AccommodationPage from './pages/AccommodationPage'
 import RsvpPage from './pages/RsvpPage'
 import RsvpAdminPage from './pages/RsvpAdminPage'
+import SeatingPage from './pages/SeatingPage'
 
 export default function App() {
   const location = useLocation()
@@ -30,6 +31,7 @@ export default function App() {
             <Route path="/accommodation" element={<AccommodationPage />} />
             <Route path="/rsvp" element={<RsvpPage />} />
             <Route path="/rsvp/:accessCode" element={<RsvpPage />} />
+            <Route path="/seating" element={<SeatingPage />} />
             <Route path="/admin" element={<RsvpAdminPage />} />
           </Routes>
         </AnimatePresence>

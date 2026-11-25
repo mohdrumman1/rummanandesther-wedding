@@ -1044,6 +1044,105 @@ async function handleSeatingPut(request, env) {
   return json({ ok: true });
 }
 
+// Public seat lookup for guests. The saved 'main' plan only ever covers the
+// Reception (Rydges Cabernet & Merlot room), so this endpoint is reception-only.
+// It returns ONLY guest display names, household names and assigned table
+// labels. It NEVER
+// returns access codes, invite URLs, RSVP answers, dietary requirements,
+// notes, emails, phones, or any admin field. Only SEATED guests are listed.
+// NOTE: this is public and unauthenticated, so anyone can read the whole seated
+// roster (name, household, table). That is an accepted trade-off for a lookup
+// guests use without a login. Guest ids are used server-side only to resolve
+// names and are stripped before responding.
+const COUPLE_NAMES = {
+  couple_esther: { name: 'Esther', household: 'Bride' },
+  couple_rumman: { name: 'Rumman', household: 'Groom' },
+};
+
+async function handlePublicSeating(env) {
+  const row = await env.DB.prepare("SELECT data FROM seating_plans WHERE id = 'main'").first();
+  if (!row) return json({ plan: null, seats: [] }, 200, NO_STORE_HEADERS);
+  let plan;
+  try {
+    plan = JSON.parse(row.data);
+  } catch {
+    return json({ plan: null, seats: [] }, 200, NO_STORE_HEADERS);
+  }
+  const num = value => (Number.isFinite(value) ? value : 0);
+  // Geometry only (for the public map). Whitelisted so admin-only fields never leak.
+  const mapTables = (Array.isArray(plan.tables) ? plan.tables : [])
+    .filter(table => table && typeof table.id === 'string')
+    .map(table => ({
+      id: table.id,
+      shape: table.shape === 'block' || table.shape === 'rect' ? table.shape : 'round',
+      name: String(table.name || ''),
+      seats: num(table.seats),
+      x: num(table.x),
+      y: num(table.y),
+      ...(Number.isFinite(table.w) ? { w: table.w } : {}),
+      ...(Number.isFinite(table.h) ? { h: table.h } : {}),
+    }));
+  const tables = {};
+  for (const table of mapTables) {
+    if (table.shape !== 'block') tables[table.id] = table.name;
+  }
+  const customById = {};
+  for (const guest of Array.isArray(plan.customGuests) ? plan.customGuests : []) {
+    if (guest?.name) customById[guest.id] = guest.name;
+  }
+  const assignments = plan.assignments && typeof plan.assignments === 'object' ? plan.assignments : {};
+  const seats = [];
+  const dbGuestIds = [];
+  const place = (guestId, assignment, name, household) => {
+    seats.push({
+      name,
+      household,
+      table: tables[assignment.tableId],
+      tableId: assignment.tableId,
+      seat: Number.isInteger(assignment.seat) ? assignment.seat : null,
+    });
+  };
+  for (const [guestId, assignment] of Object.entries(assignments)) {
+    if (!tables[assignment?.tableId]) continue;
+    if (/^child \d+$/i.test(customById[guestId] || '')) continue; // placeholder seat, not a person
+    if (COUPLE_NAMES[guestId]) {
+      place(guestId, assignment, COUPLE_NAMES[guestId].name, COUPLE_NAMES[guestId].household);
+    } else if (customById[guestId]) {
+      place(guestId, assignment, customById[guestId], '');
+    } else {
+      dbGuestIds.push(guestId);
+    }
+  }
+  const byId = {};
+  for (let i = 0; i < dbGuestIds.length; i += 50) {
+    const chunk = dbGuestIds.slice(i, i + 50);
+    const placeholders = chunk.map(() => '?').join(',');
+    const result = await env.DB.prepare(
+      `SELECT g.id, g.name, gg.household_name FROM guests g LEFT JOIN guest_groups gg ON gg.id = g.group_id WHERE g.id IN (${placeholders})`,
+    ).bind(...chunk).all();
+    for (const guest of result.results || []) byId[guest.id] = { name: guest.name, household: guest.household_name || '' };
+  }
+  for (const guestId of dbGuestIds) {
+    const info = byId[guestId];
+    if (!info || !info.name) continue; // guest row removed since seating: skip, never leak the id
+    place(guestId, assignments[guestId], info.name, info.household);
+  }
+  seats.sort((a, b) => String(a.name).localeCompare(String(b.name)));
+  // Public ids are positions in this list, never the internal guest ids.
+  seats.forEach((seat, index) => { seat.id = `s${index}`; });
+  return json({
+    plan: {
+      title: plan.title || 'Seating Plan',
+      subtitle: plan.subtitle || '',
+      event: 'Reception',
+      venue: 'Rydges Resort Hunter Valley',
+      date: 'Saturday, 12 December 2026',
+      tables: mapTables,
+    },
+    seats,
+  }, 200, NO_STORE_HEADERS);
+}
+
 async function route(request, env) {
   const url = new URL(request.url);
   const method = request.method;
@@ -1059,6 +1158,10 @@ async function route(request, env) {
     if (method === 'GET') return handleRsvpGet(request, env, parts[2]);
     if (method === 'POST') return handleRsvpPost(request, env, parts[2]);
   }
+
+  // Public guest seat lookup. Deliberately outside the admin block: guests
+  // have no login, and the handler only returns names and table labels.
+  if (parts[1] === 'seating' && !parts[2] && method === 'GET') return handlePublicSeating(env);
 
   if (parts[1] === 'admin' && parts[2] === 'login' && method === 'POST') return handleAdminLogin(request, env);
 
