@@ -390,7 +390,7 @@ export function newId(prefix) {
 
 export function tableSize(table) {
   if (table.shape === 'round') {
-    const r = 40 + Math.max(0, table.seats - 8) * 4
+    const r = 33 + Math.max(0, table.seats - 8) * 4
     return { w: r * 2, h: r * 2, r }
   }
   if (table.shape === 'rect') {

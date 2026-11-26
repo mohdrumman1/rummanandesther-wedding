@@ -50,9 +50,62 @@ export function Frame({ plan, children, footer }) {
   )
 }
 
-export function PlanSvg({ plan, guestsById, interactive = false, fluid = false, viewBox = null, footer = null, selectedId = null, dragOver = null, movingId = null, svgRef, onTableDown }) {
+function labelText(table, guest) {
+  return table.shape === 'rect' ? shorten(guest.name.split(' ')[0], 10) : seatName(guest.name, 13)
+}
+
+function labelSpot(seat) {
+  const sideways = Math.abs(seat.dx) > 0.35
+  return {
+    x: seat.x + seat.dx * 22,
+    y: seat.y + seat.dy * 22 + (seat.dy > 0.35 ? 11 : seat.dy < -0.35 ? -3 : 4),
+    anchor: sideways ? (seat.dx > 0 ? 'start' : 'end') : 'middle',
+  }
+}
+
+// Which seat labels can be drawn without sitting on another label, a seat or a table.
+// The highlighted seat and the selected table go first so their names always win.
+function visibleLabels(plan, guestsById, occ, firstTableId, highlight) {
+  const hit = (a, b) => a.x0 < b.x1 + 2 && a.x1 > b.x0 - 2 && a.y0 < b.y1 + 1 && a.y1 > b.y0 - 1
+  const taken = []
+  const cands = []
+  for (const table of plan.tables) {
+    const { w, h, r } = tableSize(table)
+    if (table.shape === 'block') {
+      taken.push({ x0: table.x - w / 2, x1: table.x + w / 2, y0: table.y - h / 2, y1: table.y + h / 2 })
+      continue
+    }
+    const half = table.shape === 'round' ? [r, r] : [w / 2, h / 2]
+    taken.push({ x0: table.x - half[0], x1: table.x + half[0], y0: table.y - half[1], y1: table.y + half[1] })
+    for (const seat of seatPositions({ ...table, x: 0, y: 0 })) {
+      taken.push({ x0: table.x + seat.x - 15, x1: table.x + seat.x + 15, y0: table.y + seat.y - 15, y1: table.y + seat.y + 15 })
+      const guest = guestsById[(occ[table.id] || {})[seat.i]]
+      if (!guest) continue
+      const text = labelText(table, guest)
+      const spot = labelSpot(seat)
+      const width = text.length * 6.4
+      const x = table.x + spot.x
+      const x0 = spot.anchor === 'start' ? x : spot.anchor === 'end' ? x - width : x - width / 2
+      const key = `${table.id}:${seat.i}`
+      const rank = highlight?.has(key) ? 0 : table.id === firstTableId ? 1 : 2
+      cands.push({ key, rank, box: { x0, x1: x0 + width, y0: table.y + spot.y - 10, y1: table.y + spot.y + 3 } })
+    }
+  }
+  cands.sort((a, b) => a.rank - b.rank)
+  const shown = new Set()
+  const placed = []
+  for (const cand of cands) {
+    if (taken.some(t => hit(cand.box, t)) || placed.some(t => hit(cand.box, t))) continue
+    placed.push(cand.box)
+    shown.add(cand.key)
+  }
+  return shown
+}
+
+export function PlanSvg({ plan, guestsById, interactive = false, fluid = false, viewBox = null, footer = null, selectedId = null, declutter = false, highlightSeats = null, dragOver = null, movingId = null, svgRef, onTableDown }) {
   const occ = occupantsByTable(plan)
   const seatedCount = Object.keys(plan.assignments).length
+  const shownLabels = declutter ? visibleLabels(plan, guestsById, occ, selectedId, highlightSeats) : null
   const place = table =>
     interactive
       ? { className: `sp-tbl${movingId === table.id ? ' sp-dragging' : ''}`, style: { transform: `translate(${table.x}px, ${table.y}px)` } }
@@ -104,7 +157,7 @@ export function PlanSvg({ plan, guestsById, interactive = false, fluid = false, 
                 {table.shape === 'round'
                   ? <circle className={fill} r={r} fill={GOLD} opacity={dragOver === `table:${table.id}` ? 0.25 : 0} />
                   : <rect className={fill} x={-w / 2} y={-h / 2} width={w} height={h} rx="8" fill={GOLD} opacity={dragOver === `table:${table.id}` ? 0.25 : 0} />}
-                <text y="-2" textAnchor="middle" fontFamily={SERIF} fontSize={table.shape === 'round' ? 19 : 18} fill={INK}>
+                <text y="-2" textAnchor="middle" fontFamily={SERIF} fontSize={table.shape === 'round' ? 14 : 18} fill={INK}>
                   {shorten(table.name, 14)}
                 </text>
                 <text y="18" textAnchor="middle" fontFamily={SANS} fontSize="11" letterSpacing="1.5" fill={GOLD_DARK}>
@@ -115,9 +168,12 @@ export function PlanSvg({ plan, guestsById, interactive = false, fluid = false, 
                 const guest = guestsById[(occ[table.id] || {})[seat.i]]
                 const hot = dragOver === `seat:${table.id}:${seat.i}`
                 const sideways = Math.abs(seat.dx) > 0.35
-                const label = guest ? (table.shape === 'rect' ? shorten(guest.name.split(' ')[0], 10) : seatName(guest.name, 13)) : ''
+                const seatKey = `${table.id}:${seat.i}`
+                const mine = Boolean(highlightSeats?.has(seatKey))
+                const label = guest && (!shownLabels || shownLabels.has(seatKey)) ? labelText(table, guest) : ''
                 return (
                   <g key={seat.i} data-seat={`${table.id}:${seat.i}`} style={interactive && guest ? { cursor: 'grab' } : undefined}>
+                    {mine && <circle cx={seat.x} cy={seat.y} r="21" fill="none" stroke={GOLD} strokeWidth="4" />}
                     <circle
                       className={fill}
                       cx={seat.x}
@@ -146,7 +202,8 @@ export function PlanSvg({ plan, guestsById, interactive = false, fluid = false, 
                         textAnchor={sideways ? (seat.dx > 0 ? 'start' : 'end') : 'middle'}
                         fontFamily={SANS}
                         fontSize="12"
-                        fill={INK}
+                        fontWeight={mine ? 700 : undefined}
+                        fill={mine ? BURGUNDY : INK}
                         pointerEvents="none"
                       >
                         {label}

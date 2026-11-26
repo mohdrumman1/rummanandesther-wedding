@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { motion } from 'framer-motion'
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { QRCodeSVG } from 'qrcode.react'
 import PageHeader from '../components/PageHeader'
 import { PlanSvg } from '../components/PlanSvg'
 import { PLAN_H, PLAN_W } from '../lib/seatingPlan'
 import { fetchPublicSeating } from '../lib/rsvpApi'
 import { findMatches, groupMatches } from '../lib/seatingLookup'
+import { MENU, MENU_NOTE } from '../lib/menu'
+import '../seatingApple.css'
 
 const pageVariants = {
   initial: { opacity: 0, y: 16 },
@@ -14,6 +16,15 @@ const pageVariants = {
 }
 
 const MAX_SHOWN_MATCHES = 8
+// Apple-style settle: no overshoot. Old view fades out fast, new one eases in from its side.
+const APPLE_EASE = [0.32, 0.72, 0, 1]
+const viewVariants = {
+  enter: ({ dir, reduce }) => ({ opacity: 0, x: reduce ? 0 : dir * 24 }),
+  center: { opacity: 1, x: 0, transition: { duration: 0.4, ease: APPLE_EASE } },
+  exit: ({ dir, reduce }) => ({ opacity: 0, x: reduce ? 0 : dir * -24, transition: { duration: 0.18, ease: 'easeIn' } }),
+}
+// "Nick Milford" in "Nick Milford & Andrea Elliott" is just noise.
+const showHousehold = g => Boolean(g.household) && !g.household.toLowerCase().includes(g.name.toLowerCase())
 // The printed QR must always point at the live site, even if this page is
 // opened from localhost or a Netlify preview.
 const SEATING_URL = 'https://rummanandesther.com/seating'
@@ -27,6 +38,9 @@ export default function SeatingPage() {
   const [attempt, setAttempt] = useState(0)
   const resultRef = useRef(null)
   const [wholeRoom, setWholeRoom] = useState(false)
+  const [view, setView] = useState('seat') // 'seat' | 'menu'
+  const reduce = useReducedMotion() ?? false
+  const viewCustom = { dir: view === 'menu' ? 1 : -1, reduce }
 
   useEffect(() => {
     let cancelled = false
@@ -112,12 +126,66 @@ export default function SeatingPage() {
     <>
       <motion.div variants={pageVariants} initial="initial" animate="animate" exit="exit" className="print:hidden">
         <PageHeader
-          title="Find Your Seat"
+          title={view === 'menu' ? 'Menu' : 'Find Your Seat'}
           subtitle="Reception · Saturday, 12 December 2026 · Rydges Resort Hunter Valley"
         />
 
         <section className="py-16 px-6 sm:px-8 lg:px-12 xl:px-16 bg-cream">
           <div className="max-w-2xl mx-auto">
+            <div className="sp-seg-wrap flex justify-center mb-8">
+              <div className="sp-seg" style={{ '--i': view === 'menu' ? 1 : 0 }}>
+                {[
+                  ['seat', 'Find Your Seat'],
+                  ['menu', 'Menu'],
+                ].map(([value, label]) => (
+                  <button key={value} type="button" aria-pressed={view === value} onClick={() => setView(value)}>
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <AnimatePresence mode="wait" initial={false} custom={viewCustom}>
+            <motion.div key={view} custom={viewCustom} variants={viewVariants} initial="enter" animate="center" exit="exit">
+            {view === 'menu' && (
+              <div
+                className="relative mx-auto w-full max-w-[560px] bg-white border border-gold/25 overflow-hidden"
+                style={{ containerType: 'inline-size', aspectRatio: '2 / 3' }}
+              >
+                <img src="/images/menu/florals-top.webp" alt="" className="absolute top-0 left-0 w-full" />
+                <img src="/images/menu/florals-bottom.webp" alt="" className="absolute bottom-0 left-0 w-full" />
+                <img
+                  src="/images/menu/menu-script.webp"
+                  alt="Menu"
+                  className="absolute"
+                  style={{ left: '29.3%', width: '42.3%', top: '23.8%' }}
+                />
+                <div
+                  className="absolute inset-x-0 text-center"
+                  style={{ top: '33.9%', fontFamily: 'Georgia, "Times New Roman", serif', lineHeight: '2.13cqw' }}
+                >
+                  {MENU.map(({ course, dishes }) => (
+                    <div key={course} style={{ marginBottom: '3.2cqw' }}>
+                      <p style={{ fontSize: '1.75cqw', color: '#111', letterSpacing: '0.02em', marginBottom: '2.1cqw' }}>
+                        - {course.toUpperCase()} -
+                      </p>
+                      {dishes.map(dish => (
+                        <p
+                          key={dish}
+                          className="whitespace-pre-line"
+                          style={{ fontSize: '1.25cqw', color: '#46608f', textTransform: 'uppercase', marginBottom: '2.1cqw' }}
+                        >
+                          {dish}
+                        </p>
+                      ))}
+                    </div>
+                  ))}
+                  <p style={{ fontSize: '1.2cqw', color: '#111', textTransform: 'uppercase', marginTop: '4cqw' }}>{MENU_NOTE}</p>
+                </div>
+              </div>
+            )}
+
+            {view === 'seat' && (<>
             {error && (
               <div className="bg-white border border-burgundy/30 p-8 text-center mb-8">
                 <p className="font-serif text-2xl font-light text-burgundy mb-2">Something went wrong</p>
@@ -195,7 +263,7 @@ export default function SeatingPage() {
                           className="w-full text-left px-5 py-3 hover:bg-cream transition-colors"
                         >
                           <span className="font-serif text-lg text-ink">{seat.name}</span>
-                          {seat.household && seat.household !== seat.name && (
+                          {showHousehold(seat) && (
                             <span className="font-sans text-[12px] text-ink/50 ml-3">{seat.household}</span>
                           )}
                         </button>
@@ -233,7 +301,7 @@ export default function SeatingPage() {
                   >
                     <p className="font-sans text-[10px] tracking-extreme uppercase text-gold/70 mb-3">
                       {selected.name}
-                      {selected.household && selected.household !== selected.name ? ` · ${selected.household}` : ''}
+                      {showHousehold(selected) ? ` · ${selected.household}` : ''}
                     </p>
                     <p className="font-sans text-[11px] tracking-ultra uppercase text-white/60 mb-2">
                       You are at
@@ -261,7 +329,7 @@ export default function SeatingPage() {
 
             {/* Room map */}
             {!error && mapPlan && (
-              <div className="bg-white border border-gold/25 p-4 sm:p-8 mt-8">
+              <div className="bg-white border border-gold/25 p-4 sm:p-8 mt-8 lg:relative lg:left-1/2 lg:-translate-x-1/2 lg:w-[min(1100px,calc(100vw-96px))]">
                 <div className="flex items-center justify-between gap-4 mb-4">
                   <div className="flex items-center gap-3">
                     <span className="h-px w-6 bg-gold" />
@@ -280,12 +348,14 @@ export default function SeatingPage() {
                   )}
                 </div>
                 <div className={zoomBox ? '' : 'overflow-x-auto'}>
-                  <div style={zoomBox ? undefined : { minWidth: 900 }}>
+                  <div className={zoomBox ? '' : 'min-w-[900px] lg:min-w-0'}>
                     <PlanSvg
                       plan={mapPlan}
                       guestsById={mapGuests}
                       fluid
                       viewBox={zoomBox}
+                      declutter
+                      highlightSeats={selected ? new Set(selected.seatKeys) : null}
                       selectedId={selected && selected.tableIds.length === 1 ? selected.tableIds[0] : null}
                       footer="RUMMAN & ESTHER  ·  RECEPTION"
                     />
@@ -312,6 +382,10 @@ export default function SeatingPage() {
               </details>
             )}
 
+            </>)}
+            </motion.div>
+            </AnimatePresence>
+
             {/* QR code for the entrance */}
             <div className="bg-white border border-gold/25 p-8 sm:p-10 mt-8 text-center">
               <div className="flex items-center justify-center gap-4 mb-6">
@@ -321,7 +395,7 @@ export default function SeatingPage() {
               </div>
               <h2 className="font-serif text-3xl font-light text-ink mb-3">At the venue</h2>
               <p className="font-sans font-light text-[14px] leading-relaxed text-ink/60 mb-8">
-                Scan the code with your phone camera to open this page and find your table.
+                Scan the code with your phone camera to find your table or see the menu.
                 The code stays the same even if the seating plan changes.
               </p>
               {seatingUrl && (

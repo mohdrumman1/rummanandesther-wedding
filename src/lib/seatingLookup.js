@@ -43,8 +43,9 @@ export function groupMatches(matches) {
         group.tables.push(seat.table)
         group.tableIds.push(seat.tableId)
       }
+      group.seatKeys.push(`${seat.tableId}:${seat.seat}`)
     } else {
-      groups.set(key, { name: seat.name, household: seat.household, tables: [seat.table], tableIds: [seat.tableId] })
+      groups.set(key, { name: seat.name, household: seat.household, tables: [seat.table], tableIds: [seat.tableId], seatKeys: [`${seat.tableId}:${seat.seat}`] })
     }
   }
   return [...groups.values()]
