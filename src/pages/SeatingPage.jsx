@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
+import { useNavigate } from 'react-router-dom'
 import { QRCodeSVG } from 'qrcode.react'
 import PageHeader from '../components/PageHeader'
 import { PlanSvg } from '../components/PlanSvg'
@@ -28,6 +29,8 @@ const showHousehold = g => Boolean(g.household) && !g.household.toLowerCase().in
 // The printed QR must always point at the live site, even if this page is
 // opened from localhost or a Netlify preview.
 const SEATING_URL = 'https://rummanandesther.com/seating'
+// Same code that is in the photo-sharing QR; it only keeps strangers off the upload API.
+const SHARE_PATH = '/share?c=J3Jn31w4Vg'
 
 export default function SeatingPage() {
   const [plan, setPlan] = useState(null)
@@ -38,6 +41,7 @@ export default function SeatingPage() {
   const [attempt, setAttempt] = useState(0)
   const resultRef = useRef(null)
   const [wholeRoom, setWholeRoom] = useState(false)
+  const navigate = useNavigate()
   const [view, setView] = useState('seat') // 'seat' | 'menu'
   const reduce = useReducedMotion() ?? false
   const viewCustom = { dir: view === 'menu' ? 1 : -1, reduce }
@@ -133,7 +137,7 @@ export default function SeatingPage() {
         <section className="py-16 px-6 sm:px-8 lg:px-12 xl:px-16 bg-cream">
           <div className="max-w-2xl mx-auto">
             <div className="sp-seg-wrap flex justify-center mb-8">
-              <div className="sp-seg" style={{ '--i': view === 'menu' ? 1 : 0 }}>
+              <div className="sp-seg" style={{ '--n': 3, '--i': view === 'menu' ? 1 : 0 }}>
                 {[
                   ['seat', 'Find Your Seat'],
                   ['menu', 'Menu'],
@@ -142,6 +146,9 @@ export default function SeatingPage() {
                     {label}
                   </button>
                 ))}
+                <button type="button" aria-pressed="false" onClick={() => navigate(SHARE_PATH)}>
+                  Share Photos
+                </button>
               </div>
             </div>
 
@@ -395,7 +402,7 @@ export default function SeatingPage() {
               </div>
               <h2 className="font-serif text-3xl font-light text-ink mb-3">At the venue</h2>
               <p className="font-sans font-light text-[14px] leading-relaxed text-ink/60 mb-8">
-                Scan the code with your phone camera to find your table or see the menu.
+                Scan the code with your phone camera to find your table, see the menu, or share your photos and videos with us.
                 The code stays the same even if the seating plan changes.
               </p>
               {seatingUrl && (
@@ -424,7 +431,7 @@ export default function SeatingPage() {
           Reception · Rydges Resort Hunter Valley · Saturday, 12 December 2026
         </p>
         {seatingUrl && <QRCodeSVG value={seatingUrl} size={320} level="M" />}
-        <p className="print:text-lg print:mt-8">Scan the code, type your name, find your table.</p>
+        <p className="print:text-lg print:mt-8">Scan the code to find your table, see the menu, and share your photos &amp; videos.</p>
       </div>
     </>
   )
