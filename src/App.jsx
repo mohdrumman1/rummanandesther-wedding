@@ -12,6 +12,9 @@ import AccommodationPage from './pages/AccommodationPage'
 import RsvpPage from './pages/RsvpPage'
 import RsvpAdminPage from './pages/RsvpAdminPage'
 import SeatingPage from './pages/SeatingPage'
+import SharePage from './pages/SharePage'
+import GalleryAdminPage from './pages/GalleryAdminPage'
+import ShareSignPage from './pages/ShareSignPage'
 
 export default function App() {
   const location = useLocation()
@@ -33,6 +36,9 @@ export default function App() {
             <Route path="/rsvp/:accessCode" element={<RsvpPage />} />
             <Route path="/seating" element={<SeatingPage />} />
             <Route path="/admin" element={<RsvpAdminPage />} />
+            <Route path="/share" element={<SharePage />} />
+            <Route path="/admin/gallery" element={<GalleryAdminPage />} />
+            <Route path="/share-sign" element={<ShareSignPage />} />
           </Routes>
         </AnimatePresence>
       </main>

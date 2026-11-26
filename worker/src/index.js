@@ -1,3 +1,5 @@
+import { handleUploads, handleAdminMediaList, handleAdminMediaDelete } from './uploads.js';
+
 const JSON_HEADERS = { 'content-type': 'application/json; charset=utf-8' };
 const NO_STORE_HEADERS = { 'cache-control': 'no-store' };
 const RSVP_DEADLINE = '2026-08-31';
@@ -30,7 +32,7 @@ function corsHeaders(request, env) {
   return {
     ...(origin ? { 'access-control-allow-origin': origin } : {}),
     'access-control-allow-methods': 'GET,POST,PUT,PATCH,DELETE,OPTIONS',
-    'access-control-allow-headers': 'content-type,authorization',
+    'access-control-allow-headers': 'content-type,authorization,x-upload-code,x-device-id,x-uploader-name',
     'access-control-max-age': '86400',
     vary: 'Origin',
   };
@@ -1163,6 +1165,8 @@ async function route(request, env) {
   // have no login, and the handler only returns names and table labels.
   if (parts[1] === 'seating' && !parts[2] && method === 'GET') return handlePublicSeating(env);
 
+  if (parts[1] === 'uploads') return handleUploads(request, env, url);
+
   if (parts[1] === 'admin' && parts[2] === 'login' && method === 'POST') return handleAdminLogin(request, env);
 
   if (parts[1] === 'admin') {
@@ -1170,6 +1174,8 @@ async function route(request, env) {
     if (!session) return json({ error: 'Admin login required.' }, 401);
     if (parts[2] === 'groups' && method === 'GET') return handleAdminGroupsGet(env, session);
     if (session.role !== 'admin') return json({ error: 'Read-only access cannot change invitees.' }, 403);
+    if (parts[2] === 'media' && !parts[3] && method === 'GET') return handleAdminMediaList(request, env, url);
+    if (parts[2] === 'media' && parts[3] && method === 'DELETE') return handleAdminMediaDelete(env, parts[3]);
     if (parts[2] === 'export' && method === 'GET') return handleAdminExport(env);
     if (parts[2] === 'seating' && method === 'GET') return handleSeatingGet(env);
     if (parts[2] === 'seating' && method === 'PUT') return handleSeatingPut(request, env);

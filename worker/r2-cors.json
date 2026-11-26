@@ -1,0 +1,19 @@
+{
+  "rules": [
+    {
+      "allowed": {
+        "origins": [
+          "http://localhost:5173",
+          "http://127.0.0.1:5173",
+          "https://rummanandesther.com",
+          "https://www.rummanandesther.com",
+          "https://main--rummanandesther.netlify.app"
+        ],
+        "methods": ["PUT", "GET", "HEAD"],
+        "headers": ["*"]
+      },
+      "exposeHeaders": ["ETag"],
+      "maxAgeSeconds": 86400
+    }
+  ]
+}
