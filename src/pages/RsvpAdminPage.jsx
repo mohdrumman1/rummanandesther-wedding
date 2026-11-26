@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
+import { Link } from 'react-router-dom'
 import PageHeader from '../components/PageHeader'
 import SeatingPlanner from '../components/SeatingPlanner'
 import '../seatingApple.css'
@@ -727,6 +728,14 @@ export default function RsvpAdminPage() {
                 >
                   Export CSV
                 </button>
+              )}
+              {!readOnly && (
+                <Link
+                  to="/admin/gallery"
+                  className="font-sans text-[10px] tracking-extreme uppercase border border-gold bg-gold/10 px-5 py-4 text-ink hover:bg-gold hover:text-white"
+                >
+                  Photo Gallery
+                </Link>
               )}
               {readOnly && (
                 <span className="font-sans text-[10px] tracking-extreme uppercase border border-gold/30 px-5 py-4 text-ink/45">
