@@ -7,7 +7,7 @@ import { getStoredIdentity } from '../lib/uploader'
 import { DOWNLOAD_HINT, STALE_AFTER, downloadLabel, useDownloader } from '../lib/downloads'
 
 const backLink =
-  'mb-6 ml-2 inline-block font-sans sm:ml-0 text-[10px] uppercase tracking-ultra text-ink/45 transition-colors duration-200 hover:text-gold-dark'
+  'mb-6 flex min-h-[48px] w-full items-center justify-center gap-2 border border-gold bg-white px-5 py-3 font-sans text-[11px] uppercase tracking-ultra text-gold-dark shadow-sm transition-colors duration-200 hover:bg-gold hover:text-white'
 
 const pageVariants = {
   initial: { opacity: 0, y: 16 },

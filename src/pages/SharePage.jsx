@@ -94,7 +94,7 @@ export default function SharePage() {
     'block w-full border border-burgundy py-5 text-center font-sans text-[11px] uppercase tracking-extreme text-burgundy transition-colors duration-200 hover:bg-burgundy hover:text-white'
 
   const backLink =
-    'mb-6 inline-block font-sans text-[10px] uppercase tracking-ultra text-ink/45 transition-colors duration-200 hover:text-gold-dark'
+    'mb-6 flex min-h-[48px] w-full items-center justify-center gap-2 border border-gold bg-white px-5 py-3 font-sans text-[11px] uppercase tracking-ultra text-gold-dark shadow-sm transition-colors duration-200 hover:bg-gold hover:text-white'
 
   const bigButton =
     'w-full bg-burgundy py-5 font-sans text-[11px] uppercase tracking-extreme text-white transition-colors duration-200 hover:bg-burgundy-dark'
