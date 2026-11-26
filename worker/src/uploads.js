@@ -354,7 +354,8 @@ export async function handleGuestGallery(request, env, url) {
   return listMedia(env, url, deviceId);
 }
 
-export async function handleAdminMediaDelete(env, id) {
+export async function handleAdminMediaDelete(env, id, session) {
+  if (session?.role !== 'admin') return fail('Only admins can delete uploads.', 403)
   const row = await env.DB.prepare('SELECT * FROM media WHERE id = ?').bind(id).first();
   if (!row) return fail('Not found.', 404);
   if (row.upload_id && row.status === 'pending') await s3Call(env, 'DELETE', row.key, { uploadId: row.upload_id }).catch(() => null);

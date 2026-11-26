@@ -1177,7 +1177,7 @@ async function route(request, env) {
     if (parts[2] === 'groups' && method === 'GET') return handleAdminGroupsGet(env, session);
     if (session.role !== 'admin') return json({ error: 'Read-only access cannot change invitees.' }, 403);
     if (parts[2] === 'media' && !parts[3] && method === 'GET') return handleAdminMediaList(request, env, url);
-    if (parts[2] === 'media' && parts[3] && method === 'DELETE') return handleAdminMediaDelete(env, parts[3]);
+    if (parts[2] === 'media' && parts[3] && method === 'DELETE') return handleAdminMediaDelete(env, parts[3], session);
     if (parts[2] === 'export' && method === 'GET') return handleAdminExport(env);
     if (parts[2] === 'seating' && method === 'GET') return handleSeatingGet(env);
     if (parts[2] === 'seating' && method === 'PUT') return handleSeatingPut(request, env);
