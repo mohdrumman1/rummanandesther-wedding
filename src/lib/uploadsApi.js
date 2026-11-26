@@ -76,3 +76,6 @@ export const fetchAdminMedia = ({ cursor, uploader } = {}) => {
 }
 
 export const deleteAdminMedia = id => call(`/api/admin/media/${enc(id)}`, { admin: true, method: 'DELETE' })
+
+export const fetchMyUploads = ({ identity, cursor, signal } = {}) =>
+  call(`/api/gallery${cursor ? `?cursor=${enc(cursor)}` : ''}`, { identity, signal })

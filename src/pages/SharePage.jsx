@@ -1,6 +1,6 @@
 import { memo, useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { motion } from 'framer-motion'
-import { useSearchParams } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import PageHeader from '../components/PageHeader'
 import { getUploader } from '../lib/uploader'
 
@@ -89,6 +89,13 @@ export default function SharePage() {
     event.target.value = ''
   }
 
+  const galleryLink = code ? `/gallery?c=${encodeURIComponent(code)}` : '/gallery'
+  const galleryButton =
+    'block w-full border border-burgundy py-5 text-center font-sans text-[11px] uppercase tracking-extreme text-burgundy transition-colors duration-200 hover:bg-burgundy hover:text-white'
+
+  const backLink =
+    'mb-6 inline-block font-sans text-[10px] uppercase tracking-ultra text-ink/45 transition-colors duration-200 hover:text-gold-dark'
+
   const bigButton =
     'w-full bg-burgundy py-5 font-sans text-[11px] uppercase tracking-extreme text-white transition-colors duration-200 hover:bg-burgundy-dark'
 
@@ -96,7 +103,18 @@ export default function SharePage() {
     <motion.div variants={pageVariants} initial="initial" animate="animate" exit="exit" className="min-h-screen bg-cream">
       <PageHeader title="Share Your Photos" subtitle="Add your photos and videos from the day" />
       <section className="mx-auto max-w-xl px-5 py-10 sm:py-14">
-        {!code || state.fatal ? (
+        <Link to="/seating" className={backLink}>
+          ← Back to Find Your Seat
+        </Link>
+        {state.fatal === 'closed' ? (
+          <div className="border border-gold/25 bg-white p-8 text-center">
+            <span className="text-2xl text-gold">◆</span>
+            <h2 className="mt-4 font-serif text-3xl font-light text-ink">Uploads have closed</h2>
+            <p className="mt-3 font-sans text-[14px] font-light leading-6 text-ink/60">
+              Thank you so much for sharing your memories with Rumman &amp; Esther. We’re no longer taking new photos and videos.
+            </p>
+          </div>
+        ) : !code || state.fatal ? (
           <div className="border border-gold/25 bg-white p-8 text-center">
             <span className="text-2xl text-gold">◆</span>
             <h2 className="mt-4 font-serif text-3xl font-light text-ink">We can't find your link</h2>
@@ -137,6 +155,9 @@ export default function SharePage() {
                 <button type="button" onClick={() => inputRef.current?.click()} className={`${bigButton} mt-6`}>
                   Add more
                 </button>
+                <Link to={galleryLink} className={`${galleryButton} mt-3`}>
+                  View Gallery
+                </Link>
               </div>
             ) : (
               <>
@@ -146,6 +167,9 @@ export default function SharePage() {
                 <p className="mt-3 text-center font-sans text-[12px] font-light text-ink/50">
                   You can finish later on Wi‑Fi. Uploads stay open for weeks.
                 </p>
+                <Link to={galleryLink} className={`${galleryButton} mt-5`}>
+                  View Gallery
+                </Link>
               </>
             )}
 

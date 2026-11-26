@@ -10,7 +10,11 @@ const MAX_TOTAL_BYTES = 200 * 1024 * 1024 * 1024;
 const URL_TTL = 3600;
 const BUCKET = 'wedding-media';
 const PAGE_SIZE = 60;
-const UUID_RE = /^[0-9a-fA-F-]{16,64}$/;
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const PENDING_GRACE_MS = 60 * 60 * 1000; // pending rows count toward caps only this long
+const STALE_PENDING_MS = 24 * 60 * 60 * 1000; // cron removes pending rows older than this
+const CLEANUP_BATCH = 200;
+const CLEANUP_ROUNDS = 3;
 // Explicit allowlist: anything else (svg, html, octet-stream...) is rejected with 415.
 const TYPE_EXT = {
   'image/jpeg': 'jpg', 'image/jpg': 'jpg', 'image/png': 'png', 'image/heic': 'heic', 'image/heif': 'heif',
@@ -103,12 +107,12 @@ async function checkGate(request, env) {
   if (!UUID_RE.test(deviceId)) return { res: fail('Missing or invalid device id.', 400) };
   if (env.UPLOAD_CLOSES) {
     const closes = Date.parse(env.UPLOAD_CLOSES);
-    if (Number.isFinite(closes) && Date.now() > closes) return { res: fail('Uploads are closed.', 403) };
+    if (Number.isFinite(closes) && Date.now() > closes) return { res: json({ error: 'Uploads are closed.', closed: true }, 410) };
   }
-  if (env.UPLOAD_LIMITER) {
-    const key = request.headers.get('cf-connecting-ip') || deviceId;
-    const { success } = await env.UPLOAD_LIMITER.limit({ key });
-    if (!success) return { res: fail('Too many requests. Please slow down.', 429) };
+  // The venue is one NAT IP: per-device limit for fairness, a generous per-IP backstop for floods.
+  const ip = request.headers.get('cf-connecting-ip');
+  if (!await allowed(env.UPLOAD_IP_LIMITER, ip) || !await allowed(env.UPLOAD_LIMITER, deviceId)) {
+    return { res: fail('Too many requests. Please slow down.', 429) };
   }
   const rawName = request.headers.get('x-uploader-name') || '';
   let name;
@@ -118,6 +122,12 @@ async function checkGate(request, env) {
   return { deviceId, uploaderName: name || null };
 }
 
+async function allowed(limiter, key) {
+  if (!limiter || !key) return true;
+  const { success } = await limiter.limit({ key });
+  return success;
+}
+
 async function validateNewFile(request, env, deviceId) {
   const body = await request.json().catch(() => null);
   if (!body) return { res: fail('Invalid JSON.') };
@@ -125,13 +135,17 @@ async function validateNewFile(request, env, deviceId) {
   const size = Number(body.size);
   if (!Object.hasOwn(TYPE_EXT, type)) return { res: fail('Only photos and videos are allowed.', 415) };
   if (!Number.isFinite(size) || size <= 0 || size > MAX_FILE_BYTES) return { res: fail('File size not allowed (max 4GB).', 413) };
-  const usage = await env.DB.prepare('SELECT COUNT(*) AS n, COALESCE(SUM(size),0) AS bytes FROM media WHERE device_id = ?').bind(deviceId).first();
+  // Abandoned pending rows stop counting after an hour (and the cron deletes them after a day).
+  const live = "(status = 'complete' OR created_at > ?)";
+  const since = new Date(Date.now() - PENDING_GRACE_MS).toISOString();
+  const usage = await env.DB.prepare(`SELECT COUNT(*) AS n, COALESCE(SUM(size),0) AS bytes FROM media WHERE device_id = ? AND ${live}`).bind(deviceId, since).first();
   if (usage.n >= MAX_DEVICE_FILES || usage.bytes + size > MAX_DEVICE_BYTES) return { res: fail('Upload limit reached for this device.', 413) };
-  const total = await env.DB.prepare('SELECT COUNT(*) AS n, COALESCE(SUM(size),0) AS bytes FROM media').first();
+  const total = await env.DB.prepare(`SELECT COUNT(*) AS n, COALESCE(SUM(size),0) AS bytes FROM media WHERE ${live}`).bind(since).first();
   if (total.n >= MAX_TOTAL_FILES || total.bytes + size > MAX_TOTAL_BYTES) return { res: fail('The shared album is full.', 413) };
   const filename = sanitizeFilename(body.filename);
   const id = crypto.randomUUID();
-  const key = `orig/${deviceId}/${crypto.randomUUID()}.${TYPE_EXT[type]}`;
+  // Key carries no device id; ownership lives in the DB row.
+  const key = `orig/${crypto.randomUUID()}/${crypto.randomUUID()}.${TYPE_EXT[type]}`;
   return { id, key, type, size: Math.floor(size), filename };
 }
 
@@ -142,9 +156,9 @@ async function insertRow(env, row, deviceId, uploaderName, uploadId) {
   ).bind(row.id, deviceId, uploaderName, row.key, row.filename, row.type, row.size, uploadId, new Date().toISOString()).run();
 }
 
-// The key must belong to this device and match a pending row for this multipart upload.
+// The key must match this device's DB row for this multipart upload (works for old and new key layouts).
 async function ownedMultipart(env, deviceId, uploadId, key) {
-  if (!key || !key.startsWith(`orig/${deviceId}/`)) return null;
+  if (!key || !uploadId) return null;
   return env.DB.prepare('SELECT * FROM media WHERE key = ? AND device_id = ? AND upload_id = ?').bind(key, deviceId, uploadId).first();
 }
 
@@ -290,11 +304,13 @@ export async function handleUploads(request, env, url) {
   return fail('Not found.', 404);
 }
 
-export async function handleAdminMediaList(request, env, url) {
+async function listMedia(env, url, guestDeviceId) {
+  const guest = Boolean(guestDeviceId);
   const cursor = url.searchParams.get('cursor') || '';
-  const uploader = (url.searchParams.get('uploader') || '').trim();
+  const uploader = guest ? '' : (url.searchParams.get('uploader') || '').trim();
   const where = ["status = 'complete'"];
   const binds = [];
+  if (guest) { where.push('device_id = ?'); binds.push(guestDeviceId); }
   if (uploader) { where.push('uploader_name = ?'); binds.push(uploader); }
   if (cursor) {
     const [ts, cid] = cursor.split('|');
@@ -308,7 +324,7 @@ export async function handleAdminMediaList(request, env, url) {
   const items = await Promise.all(page.map(async row => ({
     id: row.id,
     uploader_name: row.uploader_name,
-    device_id: row.device_id,
+    ...(guest ? {} : { device_id: row.device_id }),
     filename: row.filename,
     content_type: row.content_type,
     size: row.size,
@@ -317,9 +333,25 @@ export async function handleAdminMediaList(request, env, url) {
     originalUrl: await presign(env, 'GET', row.key, {
       'response-content-disposition': `attachment; filename="${row.filename.replace(/"/g, '')}"`,
     }),
+    ...(guest ? { inlineUrl: await presign(env, 'GET', row.key, { 'response-content-type': row.content_type }) } : {}),
   })));
   const last = page[page.length - 1];
   return json({ items, nextCursor: results.length > PAGE_SIZE && last ? `${last.created_at}|${last.id}` : null });
+}
+
+export const handleAdminMediaList = (request, env, url) => listMedia(env, url, null);
+
+// Guest "my uploads": needs upload code AND device id; SQL is hard-filtered to that device_id.
+export async function handleGuestGallery(request, env, url) {
+  if (!env.UPLOAD_CODE || !env.R2_ACCOUNT_ID || !env.R2_ACCESS_KEY_ID || !env.R2_SECRET_ACCESS_KEY) {
+    return fail('Gallery is not configured.', 503);
+  }
+  if (!safeEqual(request.headers.get('x-upload-code') || '', env.UPLOAD_CODE)) return fail('Invalid upload code.', 403);
+  const deviceId = request.headers.get('x-device-id') || '';
+  if (!UUID_RE.test(deviceId)) return fail('Missing or invalid device id.', 400);
+  // Own limiter so browsing the gallery never spends upload budget.
+  if (!await allowed(env.GALLERY_LIMITER, deviceId)) return fail('Too many requests. Please slow down.', 429);
+  return listMedia(env, url, deviceId);
 }
 
 export async function handleAdminMediaDelete(env, id) {
@@ -329,4 +361,26 @@ export async function handleAdminMediaDelete(env, id) {
   await env.MEDIA.delete([row.key, ...(row.thumb_key ? [row.thumb_key] : [])]);
   await env.DB.prepare('DELETE FROM media WHERE id = ?').bind(id).run();
   return json({ ok: true });
+}
+
+// Cron: drop pending rows older than a day, aborting any multipart upload and deleting any stored object.
+export async function cleanupStalePending(env) {
+  const cutoff = new Date(Date.now() - STALE_PENDING_MS).toISOString();
+  const canSign = env.R2_ACCOUNT_ID && env.R2_ACCESS_KEY_ID && env.R2_SECRET_ACCESS_KEY;
+  let removed = 0;
+  for (let round = 0; round < CLEANUP_ROUNDS; round += 1) {
+    const { results } = await env.DB.prepare(
+      `SELECT id, key, upload_id, thumb_key FROM media WHERE status = 'pending' AND created_at < ? ORDER BY created_at LIMIT ${CLEANUP_BATCH}`,
+    ).bind(cutoff).all();
+    if (!results.length) break;
+    if (canSign) {
+      await Promise.all(results.filter(r => r.upload_id)
+        .map(r => s3Call(env, 'DELETE', r.key, { uploadId: r.upload_id }).catch(() => null)));
+    }
+    await env.MEDIA.delete(results.flatMap(r => [r.key, ...(r.thumb_key ? [r.thumb_key] : [])]));
+    await env.DB.batch(results.map(r => env.DB.prepare("DELETE FROM media WHERE id = ? AND status = 'pending'").bind(r.id)));
+    removed += results.length;
+    if (results.length < CLEANUP_BATCH) break;
+  }
+  return removed;
 }

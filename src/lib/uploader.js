@@ -17,8 +17,18 @@ const RETRY_DELAYS = [1000, 2000, 4000, 8000, 16000, 30000, 30000, 30000]
 const MAX_RETRIES = 20
 const backoff = n => Math.min(1000 * 2 ** n, 30000)
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+// Server rate-limits/overload: wait and try again without spending the retry budget.
+const THROTTLED = new Set([429, 503])
+
+// v4 UUID; randomUUID is missing on older browsers / non-secure contexts.
 function randomId() {
-  return globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`
+  if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID()
+  const b = globalThis.crypto.getRandomValues(new Uint8Array(16))
+  b[6] = (b[6] & 0x0f) | 0x40
+  b[8] = (b[8] & 0x3f) | 0x80
+  const h = Array.from(b, x => x.toString(16).padStart(2, '0')).join('')
+  return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`
 }
 
 function loadStored() {
@@ -38,7 +48,7 @@ function saveStored(patch) {
 export function getStoredIdentity() {
   const s = loadStored()
   let deviceId = s.deviceId
-  if (!deviceId) {
+  if (!deviceId || !UUID_RE.test(deviceId)) {
     deviceId = randomId()
     saveStored({ deviceId })
   }
@@ -192,14 +202,12 @@ class Uploader {
     })
     this.uppy.on('upload-error', (file, err) => {
       if (!file) return
-      // Only 403 means a bad/closed code; anything else (404, 5xx...) is a per-file error.
-      if (err?.status === 403) {
-        this.fatal = 'code'
-        this.uppy.cancelAll()
-        this.rows.forEach((_, k) => this.#patch(k, { status: 'failed' }))
+      // 403 = bad code, 410 = uploads closed; anything else (404, 5xx...) is a per-file error.
+      if (err?.status === 403 || err?.status === 410) {
+        this.#stopAll(err.status === 410 ? 'closed' : 'code')
         return
       }
-      this.#scheduleRetry(file.id)
+      this.#scheduleRetry(file.id, err?.status)
     })
 
     if (typeof window !== 'undefined') {
@@ -286,6 +294,12 @@ class Uploader {
   }
 
   // -- internals --
+  #stopAll(reason) {
+    this.fatal = reason
+    this.uppy.cancelAll()
+    this.rows.forEach((_, k) => this.#patch(k, { status: 'failed' }))
+  }
+
   #makeThumb(id, file) {
     const p = this.thumbQueue.then(async () => {
       const blob = await makeThumb(file)
@@ -296,8 +310,14 @@ class Uploader {
     this.thumbs.set(id, p.catch(() => null))
   }
 
-  #scheduleRetry(id) {
+  #scheduleRetry(id, status) {
     const n = this.retryCounts.get(id) || 0
+    if (THROTTLED.has(status)) {
+      // Jitter spreads a venue full of phones so they don't all retry in the same second.
+      this.#patch(id, { status: 'retrying' })
+      this.#armRetry(id, Math.max(5000, backoff(n)) + Math.random() * 5000)
+      return
+    }
     if (n >= MAX_RETRIES) {
       clearTimeout(this.retryTimers.get(id))
       this.retryTimers.delete(id)
@@ -329,8 +349,11 @@ class Uploader {
       if (err?.status === 403) {
         this.fatal = 'code'
         this.#patch(id, { status: 'failed' })
+      } else if (err?.status === 410) {
+        this.fatal = 'closed'
+        this.#patch(id, { status: 'failed' })
       } else {
-        this.#scheduleRetry(id)
+        this.#scheduleRetry(id, err?.status)
       }
     }
   }

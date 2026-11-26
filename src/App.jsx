@@ -13,6 +13,7 @@ import RsvpPage from './pages/RsvpPage'
 import RsvpAdminPage from './pages/RsvpAdminPage'
 import SeatingPage from './pages/SeatingPage'
 import SharePage from './pages/SharePage'
+import GalleryPage from './pages/GalleryPage'
 import GalleryAdminPage from './pages/GalleryAdminPage'
 import ShareSignPage from './pages/ShareSignPage'
 
@@ -37,6 +38,7 @@ export default function App() {
             <Route path="/seating" element={<SeatingPage />} />
             <Route path="/admin" element={<RsvpAdminPage />} />
             <Route path="/share" element={<SharePage />} />
+            <Route path="/gallery" element={<GalleryPage />} />
             <Route path="/admin/gallery" element={<GalleryAdminPage />} />
             <Route path="/share-sign" element={<ShareSignPage />} />
           </Routes>

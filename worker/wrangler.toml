@@ -19,4 +19,19 @@ bucket_name = "wedding-media"
 [[ratelimits]]
 name = "UPLOAD_LIMITER"
 namespace_id = "3601"
+simple = { limit = 300, period = 60 }
+
+# Per-IP backstop (the venue shares one NAT IP, so this is deliberately generous).
+[[ratelimits]]
+name = "UPLOAD_IP_LIMITER"
+namespace_id = "3602"
+simple = { limit = 3000, period = 60 }
+
+# Guest gallery views, keyed by device id, separate from the upload budget.
+[[ratelimits]]
+name = "GALLERY_LIMITER"
+namespace_id = "3603"
 simple = { limit = 120, period = 60 }
+
+[triggers]
+crons = ["17 3 * * *"]

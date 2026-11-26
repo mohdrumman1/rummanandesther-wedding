@@ -1,4 +1,4 @@
-import { handleUploads, handleAdminMediaList, handleAdminMediaDelete } from './uploads.js';
+import { handleUploads, handleAdminMediaList, handleAdminMediaDelete, handleGuestGallery, cleanupStalePending } from './uploads.js';
 
 const JSON_HEADERS = { 'content-type': 'application/json; charset=utf-8' };
 const NO_STORE_HEADERS = { 'cache-control': 'no-store' };
@@ -1165,6 +1165,8 @@ async function route(request, env) {
   // have no login, and the handler only returns names and table labels.
   if (parts[1] === 'seating' && !parts[2] && method === 'GET') return handlePublicSeating(env);
 
+  if (parts[1] === 'gallery' && !parts[2] && method === 'GET') return handleGuestGallery(request, env, url);
+
   if (parts[1] === 'uploads') return handleUploads(request, env, url);
 
   if (parts[1] === 'admin' && parts[2] === 'login' && method === 'POST') return handleAdminLogin(request, env);
@@ -1196,5 +1198,9 @@ export default {
     } catch (error) {
       return withCors(json({ error: error.message || 'Unexpected server error.' }, 500), request, env);
     }
+  },
+  // Daily cron (wrangler.toml [triggers]): clear abandoned pending uploads.
+  async scheduled(event, env, ctx) {
+    ctx.waitUntil(cleanupStalePending(env));
   },
 };
